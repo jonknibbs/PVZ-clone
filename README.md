@@ -23,7 +23,7 @@ npm run preview # Serve that production build locally
 npm run format # Apply the shared formatting rules
 ```
 
-Deploy the contents of `dist/` to a static web host. The production build uses relative asset URLs so it can also be hosted under a subdirectory.
+Deploy the contents of `dist/` to a static web host. The production build uses relative asset URLs so it can also be hosted under a subdirectory. Pushes to `master` are deployed automatically by `.github/workflows/deploy.yml`, which uploads the build output over SSH to the host configured in the repository secrets.
 
 ## Where things live
 
