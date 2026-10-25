@@ -219,7 +219,7 @@ test('menus can be driven from the keyboard', () => {
   assert.equal(focusedMenuIndex(game), 1);
   key(game, 'ArrowUp');
   key(game, 'ArrowUp');
-  assert.equal(focusedMenuIndex(game), 3);
+  assert.equal(focusedMenuIndex(game), 4);
   key(game, 'ArrowDown');
   assert.equal(focusedMenuIndex(game), 0);
   key(game, 'Enter');

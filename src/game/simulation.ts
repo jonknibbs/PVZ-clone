@@ -38,7 +38,7 @@ export function updateGame(game: Game, deltaSeconds: number) {
   updateTransientEffects(game, deltaSeconds);
   if (game.state.tutorial) {
     updateTutorial(game, deltaSeconds);
-  } else {
+  } else if (game.mode !== 'sandbox') {
     checkVictory(game);
   }
 }

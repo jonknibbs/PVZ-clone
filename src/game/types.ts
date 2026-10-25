@@ -18,7 +18,7 @@ export type AntType =
   | 'mite'
   | 'digger';
 
-export type GameMode = 'free' | 'campaign' | 'tutorial';
+export type GameMode = 'free' | 'campaign' | 'tutorial' | 'sandbox';
 
 export type Screen = 'menu' | 'settings' | 'levels' | 'intro' | 'play' | 'win' | 'lose';
 

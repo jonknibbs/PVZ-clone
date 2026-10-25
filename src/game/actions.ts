@@ -117,7 +117,7 @@ export function showNotification(game: Game, text: string, tone: NotificationTon
 }
 
 export function toggleDebug(game: Game) {
-  if (!game.debugAvailable) {
+  if (!game.debugAvailable || game.mode === 'sandbox') {
     return;
   }
   game.debug = !game.debug;

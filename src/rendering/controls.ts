@@ -46,7 +46,7 @@ export function drawCrumbBank(view: RenderContext, area: Rectangle) {
   if (game.debug) {
     ctx.fillStyle = '#fff2c4';
     ctx.font = `bold ${9 * k}px sans-serif`;
-    ctx.fillText('DEBUG (F2)', centerX, area.y + 65 * k);
+    ctx.fillText(game.mode === 'sandbox' ? 'SANDBOX' : 'DEBUG (F2)', centerX, area.y + 65 * k);
   }
 }
 
