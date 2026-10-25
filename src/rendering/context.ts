@@ -1,8 +1,8 @@
 import type { Ant, Game, Marble } from '../game/types';
 
+/** Rendering works in logical 900x700 coordinates; main.ts scales the context for the display. */
 export interface RenderContext {
   game: Game;
-  canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 }
 

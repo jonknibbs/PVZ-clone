@@ -110,7 +110,8 @@ export function callAnteater(game: Game) {
 }
 
 export function showNotification(game: Game, text: string, tone: NotificationTone = 'error') {
-  game.state.notification = { text, lifeRemaining: 1.5, tone };
+  // Errors linger a little longer than neutral status messages.
+  game.state.notification = { text, lifeRemaining: tone === 'error' ? 2.4 : 1.5, tone };
 }
 
 export function toggleDebug(game: Game) {

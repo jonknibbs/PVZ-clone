@@ -108,10 +108,10 @@ function drawQuitConfirmation(view: RenderContext) {
 }
 
 function drawDebugPanel(view: RenderContext) {
-  const { ctx, canvas, game } = view;
+  const { ctx, game } = view;
   if (game.debug && game.state.screen === 'play') {
     ctx.fillStyle = '#222';
-    ctx.fillRect(0, BOARD_BOTTOM + 8, canvas.width, canvas.height - BOARD_BOTTOM - 8);
+    ctx.fillRect(0, BOARD_BOTTOM + 8, CANVAS_WIDTH, CANVAS_HEIGHT - BOARD_BOTTOM - 8);
     ANT_TYPES.forEach((type, index) => {
       const button = debugAntButton(index);
       ctx.fillStyle = ANT_DEFINITIONS[type].color;
@@ -248,7 +248,7 @@ function drawEntities(view: RenderContext) {
 }
 
 function drawStatus(view: RenderContext) {
-  const { ctx, canvas, game } = view;
+  const { ctx, game } = view;
   const invasionProgress = Math.min(1, game.state.elapsed / game.state.invasionDuration);
   ctx.fillStyle = 'rgba(21,39,31,.8)';
   roundedRect(view, 16, BOARD_Y + 10, 156, 51, 12);
@@ -268,7 +268,7 @@ function drawStatus(view: RenderContext) {
   ctx.fill();
   if (game.state.screen === 'play' && game.state.paused && !game.state.confirmQuit) {
     ctx.fillStyle = 'rgba(0,0,0,.55)';
-    ctx.fillRect(0, TOOLBAR_HEIGHT, canvas.width, canvas.height - TOOLBAR_HEIGHT);
+    ctx.fillRect(0, TOOLBAR_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT - TOOLBAR_HEIGHT);
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
     ctx.font = 'bold 48px sans-serif';

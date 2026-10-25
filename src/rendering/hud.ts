@@ -1,4 +1,10 @@
-import { ANTEATER_COOLDOWN, GLOVE_COOLDOWN, TOOLBAR_HEIGHT } from '../game/constants';
+import {
+  ANTEATER_COOLDOWN,
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  GLOVE_COOLDOWN,
+  TOOLBAR_HEIGHT,
+} from '../game/constants';
 import {
   ANT_DEFINITIONS,
   CAMPAIGN_LEVELS,
@@ -14,14 +20,14 @@ import { roundedRect } from './primitives';
 import { drawItemPreview, drawTrackPiece } from './track';
 
 export function drawToolbar(view: RenderContext) {
-  const { ctx, canvas, game } = view;
+  const { ctx, game } = view;
   const bar = ctx.createLinearGradient(0, 0, 0, TOOLBAR_HEIGHT);
   bar.addColorStop(0, '#263c32');
   bar.addColorStop(1, '#192e28');
   ctx.fillStyle = bar;
-  ctx.fillRect(0, 0, canvas.width, TOOLBAR_HEIGHT);
+  ctx.fillRect(0, 0, CANVAS_WIDTH, TOOLBAR_HEIGHT);
   ctx.fillStyle = 'rgba(240,218,158,.18)';
-  ctx.fillRect(0, TOOLBAR_HEIGHT - 2, canvas.width, 2);
+  ctx.fillRect(0, TOOLBAR_HEIGHT - 2, CANVAS_WIDTH, 2);
   ctx.fillStyle = '#e8d09a';
   ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
   ctx.textAlign = 'left';
@@ -64,17 +70,29 @@ export function drawToolbar(view: RenderContext) {
     ctx.lineWidth = game.state.selectedItem === type ? 2 : 1;
     roundedRect(view, slot.x + 0.5, slot.y + 0.5, slot.width - 1, slot.height - 1, 8);
     ctx.stroke();
+    const iconX = slot.x + slot.width / 2;
+    const iconY = slot.y + 34;
+    // Item art is drawn at board size, so shrink it to fit inside the slot.
+    const artWidth = isTrackType(type) ? 70 : 54;
+    const scale = Math.min(1, (slot.width - 4) / artWidth);
+    ctx.save();
+    roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
+    ctx.clip();
+    ctx.translate(iconX, iconY);
+    ctx.scale(scale, scale);
+    ctx.translate(-iconX, -iconY);
     if (isTrackType(type)) {
-      drawTrackPiece(view, type, slot.x + slot.width / 2, slot.y + 34, affordable ? 1 : 0.4);
+      drawTrackPiece(view, type, iconX, iconY, affordable ? 1 : 0.4);
     } else {
       drawMarble(
         view,
         { type: type, elapsed: 0, health: 1, maxHealth: 1, touchingAnt: false },
-        slot.x + slot.width / 2,
-        slot.y + 34,
+        iconX,
+        iconY,
         affordable ? 1 : 0.4,
       );
     }
+    ctx.restore();
     ctx.fillStyle = '#f6f0db';
     ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
     ctx.textAlign = 'center';
@@ -174,14 +192,14 @@ export function drawToolbar(view: RenderContext) {
 }
 
 export function drawMenuOverlay(view: RenderContext) {
-  const { ctx, canvas, game } = view;
+  const { ctx, game } = view;
   const screen = game.state.screen;
-  const centerX = canvas.width / 2;
+  const centerX = CANVAS_WIDTH / 2;
   ctx.fillStyle =
     screen === 'menu' || screen === 'levels' || screen === 'intro'
       ? 'rgba(16,35,28,.91)'
       : 'rgba(12,25,21,.78)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   const panel = ctx.createLinearGradient(200, 110, 700, 590);
   panel.addColorStop(0, 'rgba(63,86,60,.96)');
   panel.addColorStop(1, 'rgba(34,59,48,.97)');
@@ -288,7 +306,7 @@ export function drawMenuOverlay(view: RenderContext) {
             ? ['Level ' + (game.levelIndex + 1) + ' complete!']
             : ['You defended the maze!'];
     ctx.font = 'bold 42px "Trebuchet MS",sans-serif';
-    ctx.fillText(messages[0], centerX, canvas.height / 2 - 20);
+    ctx.fillText(messages[0], centerX, CANVAS_HEIGHT / 2 - 20);
   }
   ctx.shadowBlur = 0;
   for (const button of getMenuButtons(game)) {
