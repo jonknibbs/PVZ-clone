@@ -13,8 +13,9 @@ npm run dev
 
 Open the local URL printed by Vite, usually `http://127.0.0.1:5173`.
 The source now uses ES modules: opening the HTML file directly is no longer supported.
-The game supports touch input on phones and adapts its canvas to small screens. Landscape
-orientation provides the clearest view of the playfield and toolbar.
+The game supports touch input. Landscape phones and tablets get a compact layout: the board
+fills the screen with large controls beside or below it. Portrait phones show the desktop page
+with a hint to rotate.
 
 ```sh
 npm run check   # Strict type checking, regression tests, and formatting checks
@@ -27,28 +28,28 @@ Deploy the contents of `dist/` to a static web host. The production build uses r
 
 ## Where things live
 
-| Location                                                       | Responsibility                                                              |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| [index.html](./index.html), [src/styles.css](./src/styles.css) | Page structure and responsive presentation                                  |
-| [src/main.ts](./src/main.ts)                                   | Browser startup, animation loop, and development cleanup                    |
-| [src/game/types.ts](./src/game/types.ts)                       | Entity models, game state, and integration boundaries                       |
-| [src/game/constants.ts](./src/game/constants.ts)               | Board geometry, physics, timings, and damage constants                      |
-| [src/game/definitions.ts](./src/game/definitions.ts)           | Marble/track catalogs, ant stats, and campaign unlocks                      |
-| [src/game/game.ts](./src/game/game.ts)                         | Creating/resetting games and generating invasion schedules                  |
-| [src/game/simulation.ts](./src/game/simulation.ts)             | Frame orchestration, spawning, the Ant Eater, pickups, effects, and victory |
-| [src/game/marbles.ts](./src/game/marbles.ts)                   | Marble contact, movement, track interactions, abilities, and projectiles    |
-| [src/game/ants.ts](./src/game/ants.ts)                         | Emergence, movement, chewing, jumping/burrowing, spitters, and Queen brood  |
-| [src/game/combat.ts](./src/game/combat.ts)                     | Entity spawning, damage, explosions, shards, and death snapshots            |
-| [src/game/actions.ts](./src/game/actions.ts)                   | Player actions: purchases, glove, pause, selection, and notifications       |
-| [src/game/preferences.ts](./src/game/preferences.ts)           | Saved progress and marble-style preferences                                 |
-| [src/rendering/](./src/rendering/)                             | Canvas painting, split into board, marbles, ants, tracks, effects, and HUD  |
-| [src/ui/](./src/ui/)                                           | Shared hit areas, menu definitions, and mouse/keyboard handlers             |
-| [tests/](./tests/)                                             | Behavioral regression tests and original-game fixtures                      |
-| [SPEC.md](./SPEC.md)                                           | Gameplay reference and controls                                             |
+| Location                                                       | Responsibility                                                                        |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [index.html](./index.html), [src/styles.css](./src/styles.css) | Page structure and responsive presentation                                            |
+| [src/main.ts](./src/main.ts)                                   | Browser startup, animation loop, and development cleanup                              |
+| [src/game/types.ts](./src/game/types.ts)                       | Entity models, game state, and integration boundaries                                 |
+| [src/game/constants.ts](./src/game/constants.ts)               | Board geometry, physics, timings, and damage constants                                |
+| [src/game/definitions.ts](./src/game/definitions.ts)           | Marble/track catalogs, ant stats, and campaign unlocks                                |
+| [src/game/game.ts](./src/game/game.ts)                         | Creating/resetting games and generating invasion schedules                            |
+| [src/game/simulation.ts](./src/game/simulation.ts)             | Frame orchestration, spawning, the Ant Eater, pickups, effects, and victory           |
+| [src/game/marbles.ts](./src/game/marbles.ts)                   | Marble contact, movement, track interactions, abilities, and projectiles              |
+| [src/game/ants.ts](./src/game/ants.ts)                         | Emergence, movement, chewing, jumping/burrowing, spitters, and Queen brood            |
+| [src/game/combat.ts](./src/game/combat.ts)                     | Entity spawning, damage, explosions, shards, and death snapshots                      |
+| [src/game/actions.ts](./src/game/actions.ts)                   | Player actions: purchases, glove, pause, selection, and notifications                 |
+| [src/game/preferences.ts](./src/game/preferences.ts)           | Saved progress and marble-style preferences                                           |
+| [src/rendering/](./src/rendering/)                             | Canvas painting, split into board, marbles, ants, tracks, effects, HUD and controls   |
+| [src/ui/](./src/ui/)                                           | Hit areas, the desktop/compact viewport layouts, menus, and pointer/keyboard handlers |
+| [tests/](./tests/)                                             | Behavioral regression tests and original-game fixtures                                |
+| [SPEC.md](./SPEC.md)                                           | Gameplay reference and controls                                                       |
 
 ## How the pieces fit
 
-Each game has an explicit `Game` object containing its current state, preferences, random-number source, preference store, and delayed-shot scheduler. There are no shared mutable game globals. Tests can create independent games without a canvas, browser, real timers, or local storage.
+Each game has an explicit `Game` object containing its current state, preferences, random-number source and preference store. There are no shared mutable game globals, and every timer runs on game time, so pausing freezes everything. Tests can create independent games without a canvas, browser, real timers, or local storage.
 
 `updateGame(game, deltaSeconds)` advances the simulation. Its order is intentional:
 

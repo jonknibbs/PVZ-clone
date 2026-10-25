@@ -11,6 +11,8 @@ import type { Point, Rectangle } from '../game/types';
 export const PAUSE_BUTTON = { x: 20, y: BOARD_Y + 69, width: 130, height: 28 };
 export const MENU_BUTTON = { x: 20, y: BOARD_Y + 103, width: 130, height: 28 };
 export const DEBUG_BUTTON = { x: 20, y: BOARD_Y + 137, width: 130, height: 38 };
+export const CRUMB_BANK = { x: 10, y: 19, width: 86, height: 73 };
+export const INVASION_PANEL = { x: 16, y: BOARD_Y + 10, width: 156, height: 51 };
 export const TOOL_BUTTONS = {
   eater: { x: 680, y: 8, width: 68, height: 88 },
   glove: { x: 752, y: 8, width: 138, height: 88 },

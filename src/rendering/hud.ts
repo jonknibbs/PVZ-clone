@@ -1,24 +1,14 @@
-import {
-  ANTEATER_COOLDOWN,
-  CANVAS_HEIGHT,
-  CANVAS_WIDTH,
-  GLOVE_COOLDOWN,
-  TOOLBAR_HEIGHT,
-} from '../game/constants';
-import {
-  ANT_DEFINITIONS,
-  CAMPAIGN_LEVELS,
-  isTrackType,
-  ITEM_DEFINITIONS,
-} from '../game/definitions';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, TOOLBAR_HEIGHT } from '../game/constants';
+import { ANT_DEFINITIONS, CAMPAIGN_LEVELS } from '../game/definitions';
 import { focusedMenuIndex } from '../ui/input';
-import { containsPoint, TOOL_BUTTONS, toolbarSlot } from '../ui/layout';
+import { containsPoint, CRUMB_BANK, TOOL_BUTTONS, toolbarSlot } from '../ui/layout';
 import { getIntroductionRows, getMenuButtons } from '../ui/menus';
 import { drawAnt, drawAnteater } from './ants';
 import type { RenderContext } from './context';
+import { drawCrumbBank, drawEaterButton, drawGloveButton, drawItemSlot } from './controls';
 import { drawMarble } from './marbles';
 import { roundedRect } from './primitives';
-import { drawItemPreview, drawTrackPiece } from './track';
+import { drawItemPreview } from './track';
 
 export function drawToolbar(view: RenderContext) {
   const { ctx, game } = view;
@@ -33,164 +23,16 @@ export function drawToolbar(view: RenderContext) {
   ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('ANTS  /  MARBLES', 16, 16);
-  const bank = ctx.createLinearGradient(10, 10, 96, 90);
-  bank.addColorStop(0, '#e7ca7a');
-  bank.addColorStop(0.55, '#ba9657');
-  bank.addColorStop(1, '#76583d');
-  ctx.fillStyle = bank;
-  roundedRect(view, 10, 19, 86, 73, 12);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,243,198,.52)';
-  ctx.lineWidth = 1;
-  roundedRect(view, 10.5, 19.5, 85, 72, 12);
-  ctx.stroke();
-  ctx.fillStyle = '#39452f';
-  ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('CRUMBS', 53, 36);
-  ctx.fillStyle = '#fff4d0';
-  ctx.font = 'bold 26px Georgia,serif';
-  ctx.fillText(game.debug ? '∞' : String(Math.floor(game.state.crumbs)), 53, 68);
-  if (game.debug) {
-    ctx.fillStyle = '#fff2c4';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.fillText('DEBUG (F2)', 53, 84);
-  }
+  drawCrumbBank(view, CRUMB_BANK);
   game.state.availableItems.forEach((type, index) => {
     const slot = toolbarSlot(index);
-    const definition = ITEM_DEFINITIONS[type];
-    const affordable = game.state.crumbs >= definition.cost;
-    const cooldown = game.state.cooldowns[type];
-    const selected = game.state.selectedItem === type;
-    const hot = !selected && containsPoint(game.state.pointer, slot);
-    const card = ctx.createLinearGradient(slot.x, slot.y, slot.x, slot.y + slot.height);
-    card.addColorStop(0, selected ? '#526b4b' : hot ? '#43603f' : '#344d3d');
-    card.addColorStop(1, '#20382f');
-    ctx.fillStyle = card;
-    roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
-    ctx.fill();
-    ctx.strokeStyle = selected ? '#f3d98c' : hot ? 'rgba(243,217,140,.7)' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = selected ? 2 : 1;
-    roundedRect(view, slot.x + 0.5, slot.y + 0.5, slot.width - 1, slot.height - 1, 8);
-    ctx.stroke();
-    const iconX = slot.x + slot.width / 2;
-    const iconY = slot.y + 34;
-    // Item art is drawn at board size, so shrink it to fit inside the slot.
-    const artWidth = isTrackType(type) ? 70 : 54;
-    const scale = Math.min(1, (slot.width - 4) / artWidth);
-    ctx.save();
-    roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
-    ctx.clip();
-    ctx.translate(iconX, iconY);
-    ctx.scale(scale, scale);
-    ctx.translate(-iconX, -iconY);
-    if (isTrackType(type)) {
-      drawTrackPiece(view, type, iconX, iconY, affordable ? 1 : 0.4);
-    } else {
-      drawMarble(
-        view,
-        { type: type, elapsed: 0, health: 1, maxHealth: 1, touchingAnt: false },
-        iconX,
-        iconY,
-        affordable ? 1 : 0.4,
-      );
-    }
-    ctx.restore();
-    ctx.fillStyle = '#f6f0db';
-    ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(definition.name, slot.x + slot.width / 2, slot.y + 64);
-    ctx.fillStyle = affordable ? '#f1d58e' : '#d28b79';
-    ctx.font = 'bold 12px "Trebuchet MS",sans-serif';
-    ctx.fillText(String(definition.cost), slot.x + slot.width / 2, slot.y + 81);
-    if (cooldown > 0) {
-      ctx.fillStyle = 'rgba(8,19,16,.72)';
-      ctx.save();
-      roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
-      ctx.clip();
-      ctx.fillRect(slot.x, slot.y, slot.width, (slot.height * cooldown) / definition.cooldown);
-      ctx.restore();
-    }
-    ctx.fillStyle = 'rgba(246,240,219,.65)';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.fillText(
-      index < 9 ? String(index + 1) : index === 9 ? '0' : index === 10 ? '-' : '=',
-      slot.x + 8,
-      slot.y + 10,
-    );
+    drawItemSlot(view, type, index, slot, { hot: containsPoint(game.state.pointer, slot) });
   });
-  // ant eater special weapon and tools
   if (game.state.abilities.eater) {
-    const eaterX = TOOL_BUTTONS.eater.x;
-    const ready = game.state.anteaterCooldown <= 0 && !game.state.anteater;
-    ctx.fillStyle = ready ? '#6c7750' : '#314b3a';
-    roundedRect(view, eaterX, 8, TOOL_BUTTONS.eater.width, 88, 9);
-    ctx.fill();
-    ctx.strokeStyle = ready ? '#e6d18e' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = ready ? 2 : 1;
-    roundedRect(view, eaterX + 0.5, 8.5, TOOL_BUTTONS.eater.width - 1, 87, 9);
-    ctx.stroke();
-    drawAnteater(view, eaterX + TOOL_BUTTONS.eater.width / 2, 52, 0.45, ready ? 1 : 0.4);
-    ctx.fillStyle = '#f4eed7';
-    ctx.font = 'bold 9px "Trebuchet MS",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      ready
-        ? 'EATER (E)'
-        : game.state.anteater
-          ? 'EATING...'
-          : Math.ceil(game.state.anteaterCooldown) + 's',
-      eaterX + TOOL_BUTTONS.eater.width / 2,
-      88,
-    );
-    if (!ready && !game.state.anteater) {
-      ctx.fillStyle = 'rgba(0,0,0,.42)';
-      ctx.save();
-      roundedRect(view, eaterX + 2, 10, TOOL_BUTTONS.eater.width - 4, 84, 7);
-      ctx.clip();
-      ctx.fillRect(
-        eaterX + 2,
-        10,
-        TOOL_BUTTONS.eater.width - 4,
-        (84 * game.state.anteaterCooldown) / ANTEATER_COOLDOWN,
-      );
-      ctx.restore();
-    }
+    drawEaterButton(view, TOOL_BUTTONS.eater);
   }
   if (game.state.abilities.glove) {
-    const button = TOOL_BUTTONS.glove;
-    const on = game.state.gloveActive;
-    ctx.fillStyle = on ? '#677b50' : '#314b3a';
-    roundedRect(view, button.x, 8, button.width, 88, 9);
-    ctx.fill();
-    ctx.strokeStyle = on ? '#f1d58e' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = on ? 2 : 1;
-    roundedRect(view, button.x + 0.5, 8.5, button.width - 1, 87, 9);
-    ctx.stroke();
-    ctx.font = '32px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🧤', button.x + button.width / 2, 56);
-    ctx.fillStyle = '#f4eed7';
-    ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
-    const gloveResting = game.state.gloveCooldown > 0 && !game.state.gloveActive;
-    ctx.fillText(
-      gloveResting ? Math.ceil(game.state.gloveCooldown) + 's' : 'Glove (G)',
-      button.x + button.width / 2,
-      84,
-    );
-    if (gloveResting) {
-      ctx.fillStyle = 'rgba(0,0,0,.42)';
-      ctx.save();
-      roundedRect(view, button.x + 2, 10, button.width - 4, 84, 7);
-      ctx.clip();
-      ctx.fillRect(
-        button.x + 2,
-        10,
-        button.width - 4,
-        (84 * game.state.gloveCooldown) / GLOVE_COOLDOWN,
-      );
-      ctx.restore();
-    }
+    drawGloveButton(view, TOOL_BUTTONS.glove);
   }
 }
 

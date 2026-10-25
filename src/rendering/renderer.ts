@@ -11,11 +11,12 @@ import {
   MIN_DROP_Y,
   TOOLBAR_HEIGHT,
 } from '../game/constants';
-import { ANT_DEFINITIONS, ANT_TYPES, CAMPAIGN_LEVELS } from '../game/definitions';
+import { ANT_TYPES, CAMPAIGN_LEVELS } from '../game/definitions';
 import {
   containsPoint,
   DEBUG_BUTTON,
   debugAntButton,
+  INVASION_PANEL,
   laneAt,
   MENU_BUTTON,
   PAUSE_BUTTON,
@@ -23,24 +24,105 @@ import {
   QUIT_CONFIRM_BUTTON,
   QUIT_DIALOG,
 } from '../ui/layout';
+import { activeTransform, DESKTOP_LAYOUT, type Layout, type ViewTransform } from '../ui/viewport';
 import { drawAnt, drawAnteater } from './ants';
 import { drawBoard } from './board';
 import type { RenderContext } from './context';
+import {
+  drawControlPanel,
+  drawDebugAntButtons,
+  drawDebugButton,
+  drawInvasionPanel,
+  drawMenuButton,
+  drawPauseButton,
+} from './controls';
 import { drawDeathAnimation } from './effects';
 import { drawMenuOverlay, drawToolbar } from './hud';
 import { drawMarble } from './marbles';
 import { drawSphere, roundedRect } from './primitives';
 import { drawItemPreview, drawTrackPiece } from './track';
 
-export function renderGame(view: RenderContext) {
+export function renderGame(view: RenderContext, layout: Layout = DESKTOP_LAYOUT) {
+  const { ctx, game } = view;
+  const screen = game.state.screen;
+  if (layout.kind === 'desktop' || screen !== 'play') {
+    ctx.save();
+    if (layout.menuClip) {
+      // Menus show their panel region, letterboxed in the viewport.
+      fillCanvas(view, layout, '#172820');
+      const clip = layout.menuClip;
+      ctx.beginPath();
+      ctx.rect(clip.x, clip.y, clip.width, clip.height);
+      ctx.clip();
+    }
+    applyTransform(ctx, activeTransform(layout, screen));
+    drawBoard(view);
+    drawDebugPanel(view);
+    drawPlacementPreview(view);
+    drawEntities(view);
+    drawToolbar(view);
+    drawStatus(view);
+    drawQuitConfirmation(view, () => {
+      ctx.fillStyle = QUIT_SHADE;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    });
+    // Drawn last so a warning is never hidden behind the win or lose panel.
+    drawNotification(view);
+    ctx.restore();
+    return;
+  }
+  renderCompactPlay(view, layout);
+}
+
+/** Compact play: the board through a clipped, scaled viewport, with the controls beside it. */
+function renderCompactPlay(view: RenderContext, layout: Layout) {
+  const { ctx, game } = view;
+  const clip = layout.boardClip;
+  const panel = layout.panel;
+  if (!clip || !panel) {
+    throw new Error('The compact layout needs a board area and a control panel.');
+  }
+  const backdrop = ctx.createLinearGradient(0, 0, 0, layout.height);
+  backdrop.addColorStop(0, '#263c32');
+  backdrop.addColorStop(1, '#172820');
+  fillCanvas(view, layout, backdrop);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(clip.x, clip.y, clip.width, clip.height);
+  ctx.clip();
+  applyTransform(ctx, layout.world);
   drawBoard(view);
-  drawDebugPanel(view);
   drawPlacementPreview(view);
   drawEntities(view);
-  drawStatus(view);
-  drawQuitConfirmation(view);
-  // Drawn last so a warning is never hidden behind the win or lose panel.
+  drawPauseOverlay(view, 'Press P or tap Resume');
+  ctx.restore();
+  drawControlPanel(view, panel);
+  if (game.debug) {
+    drawDebugAntButtons(view, layout.debugAnts);
+  }
+  ctx.save();
+  applyTransform(ctx, layout.world);
+  drawQuitConfirmation(view, () => {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = QUIT_SHADE;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore();
+  });
   drawNotification(view);
+  ctx.restore();
+}
+
+const QUIT_SHADE = 'rgba(8,19,16,.72)';
+
+function fillCanvas(view: RenderContext, layout: Layout, style: string | CanvasGradient) {
+  view.ctx.fillStyle = style;
+  view.ctx.fillRect(0, 0, layout.width, layout.height);
+}
+
+function applyTransform(ctx: CanvasRenderingContext2D, transform: ViewTransform) {
+  ctx.translate(transform.x, transform.y);
+  ctx.scale(transform.scale, transform.scale);
 }
 
 function drawNotification(view: RenderContext) {
@@ -67,14 +149,13 @@ function drawNotification(view: RenderContext) {
   ctx.fillText(notification.text, centerX, centerY);
 }
 
-function drawQuitConfirmation(view: RenderContext) {
+function drawQuitConfirmation(view: RenderContext, shade: () => void) {
   const { ctx, game } = view;
   if (game.state.screen !== 'play' || !game.state.confirmQuit) {
     return;
   }
   const centerX = QUIT_DIALOG.x + QUIT_DIALOG.width / 2;
-  ctx.fillStyle = 'rgba(8,19,16,.72)';
-  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  shade();
   ctx.fillStyle = 'rgba(34,59,48,.98)';
   roundedRect(view, QUIT_DIALOG.x, QUIT_DIALOG.y, QUIT_DIALOG.width, QUIT_DIALOG.height, 18);
   ctx.fill();
@@ -112,18 +193,10 @@ function drawDebugPanel(view: RenderContext) {
   if (game.debug && game.state.screen === 'play') {
     ctx.fillStyle = '#222';
     ctx.fillRect(0, BOARD_BOTTOM + 8, CANVAS_WIDTH, CANVAS_HEIGHT - BOARD_BOTTOM - 8);
-    ANT_TYPES.forEach((type, index) => {
-      const button = debugAntButton(index);
-      ctx.fillStyle = ANT_DEFINITIONS[type].color;
-      ctx.fillRect(button.x, button.y, button.width, button.height);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(button.x + 0.5, button.y + 0.5, button.width - 1, button.height - 1);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(type, button.x + button.width / 2, button.y + 19);
-    });
+    drawDebugAntButtons(
+      view,
+      ANT_TYPES.map((_, index) => debugAntButton(index)),
+    );
   }
 }
 
@@ -244,30 +317,10 @@ function drawEntities(view: RenderContext) {
     ctx.textAlign = 'center';
     ctx.fillText('25', drop.x, drop.y + 5);
   }
-  drawToolbar(view);
 }
 
-function drawStatus(view: RenderContext) {
+function drawPauseOverlay(view: RenderContext, hint = 'Press P or click Resume') {
   const { ctx, game } = view;
-  const invasionProgress = Math.min(1, game.state.elapsed / game.state.invasionDuration);
-  ctx.fillStyle = 'rgba(21,39,31,.8)';
-  roundedRect(view, 16, BOARD_Y + 10, 156, 51, 12);
-  ctx.fill();
-  ctx.fillStyle = '#e7e9cd';
-  ctx.font = 'bold 11px "Trebuchet MS",sans-serif';
-  ctx.textAlign = 'left';
-  // Once the schedule is empty the bar is full, so count the ants still standing.
-  const lastAnts = !game.state.spawnQueue.length && game.state.ants.length;
-  ctx.fillText(lastAnts ? 'ANTS LEFT: ' + game.state.ants.length : 'INVASION', 28, BOARD_Y + 28);
-  ctx.fillStyle = 'rgba(8,22,17,.75)';
-  roundedRect(view, 28, BOARD_Y + 36, 132, 8, 4);
-  ctx.fill();
-  const progress = ctx.createLinearGradient(28, 0, 160, 0);
-  progress.addColorStop(0, '#e78b54');
-  progress.addColorStop(1, '#e6c46b');
-  ctx.fillStyle = progress;
-  roundedRect(view, 28, BOARD_Y + 36, 132 * invasionProgress, 8, 4);
-  ctx.fill();
   if (game.state.screen === 'play' && game.state.paused && !game.state.confirmQuit) {
     ctx.fillStyle = 'rgba(0,0,0,.55)';
     ctx.fillRect(0, TOOLBAR_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT - TOOLBAR_HEIGHT);
@@ -276,67 +329,21 @@ function drawStatus(view: RenderContext) {
     ctx.font = 'bold 48px sans-serif';
     ctx.fillText('Paused', BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2, BOARD_Y + LANE_LENGTH / 2);
     ctx.font = '18px sans-serif';
-    ctx.fillText(
-      'Press P or click Resume',
-      BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2,
-      BOARD_Y + LANE_LENGTH / 2 + 34,
-    );
+    ctx.fillText(hint, BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2, BOARD_Y + LANE_LENGTH / 2 + 34);
   }
+}
+
+/** The desktop HUD column to the left of the board, plus the menu overlay. */
+function drawStatus(view: RenderContext) {
+  const { ctx, game } = view;
+  drawInvasionPanel(view, INVASION_PANEL);
+  drawPauseOverlay(view);
   if (game.state.screen === 'play') {
-    const button = PAUSE_BUTTON;
-    ctx.fillStyle = game.state.paused ? '#e3cb88' : 'rgba(21,39,31,.82)';
-    roundedRect(view, button.x, button.y, button.width, button.height, 8);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(239,220,168,.55)';
-    ctx.lineWidth = 1;
-    roundedRect(view, button.x + 0.5, button.y + 0.5, button.width - 1, button.height - 1, 8);
-    ctx.stroke();
-    ctx.fillStyle = '#f7f0dc';
-    ctx.font = 'bold 12px "Trebuchet MS",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      game.state.paused ? '▶ Resume (P)' : '⏸ Pause (P)',
-      button.x + button.width / 2,
-      button.y + 19,
-    );
-    const menuButton = MENU_BUTTON;
-    ctx.fillStyle = 'rgba(21,39,31,.82)';
-    roundedRect(view, menuButton.x, menuButton.y, menuButton.width, menuButton.height, 8);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(239,220,168,.55)';
-    roundedRect(
-      view,
-      menuButton.x + 0.5,
-      menuButton.y + 0.5,
-      menuButton.width - 1,
-      menuButton.height - 1,
-      8,
-    );
-    ctx.stroke();
-    ctx.fillStyle = '#f7f0dc';
-    ctx.fillText('☰  Main menu', menuButton.x + menuButton.width / 2, menuButton.y + 19);
-    const debugButton = DEBUG_BUTTON;
-    ctx.fillStyle = game.debug ? '#647746' : 'rgba(21,39,31,.82)';
-    roundedRect(view, debugButton.x, debugButton.y, debugButton.width, debugButton.height, 8);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(239,220,168,.55)';
-    roundedRect(
-      view,
-      debugButton.x + 0.5,
-      debugButton.y + 0.5,
-      debugButton.width - 1,
-      debugButton.height - 1,
-      8,
-    );
-    ctx.stroke();
-    ctx.fillStyle = '#f7f0dc';
-    ctx.font = 'bold 12px "Trebuchet MS",sans-serif';
-    ctx.fillText(
-      game.debug ? 'Debug: ON' : 'Debug: OFF',
-      debugButton.x + debugButton.width / 2,
-      debugButton.y + 24,
-    );
+    drawPauseButton(view, PAUSE_BUTTON);
+    drawMenuButton(view, MENU_BUTTON);
+    drawDebugButton(view, DEBUG_BUTTON);
     if (game.mode === 'campaign') {
+      ctx.fillStyle = '#f7f0dc';
       ctx.textAlign = 'left';
       ctx.font = 'bold 13px sans-serif';
       ctx.fillText('Level ' + (game.levelIndex + 1), 20, BOARD_Y + 201);

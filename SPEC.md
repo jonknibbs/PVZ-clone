@@ -17,7 +17,7 @@ A browser tower-defence game in the style of Plants vs Zombies. Ants climb a mar
 - **Bottom:** the exit, where ants enter. Marbles stop at the exit.
 - Top bar: crumb counter, marble selector (12 slots incl. track pieces), eater, glove.
 - Left side: invasion progress bar. Once the schedule is exhausted it reads **ANTS LEFT: n** so the final Queen is accounted for.
-- On phones, tap the canvas to use controls; landscape orientation gives the clearest view.
+- On phones, tap the canvas to use controls. Landscape phones and tablets get a compact layout with large controls beside or below the board (see §8).
 
 ## 3. Resources — Crumbs
 
@@ -136,9 +136,14 @@ Modifier keys are ignored, so browser shortcuts such as Cmd+1 or Ctrl+- are not 
 
 ## 8. Platform and display
 
-- The canvas bitmap is scaled to `devicePixelRatio`, so the game is sharp on high-density screens. All drawing uses logical 900×700 coordinates.
+- The canvas bitmap is scaled to `devicePixelRatio`, so the game is sharp on high-density screens. Game drawing uses logical 900×700 world coordinates.
 - Touch is supported: tapping moves the placement preview as well as acting on the tap.
-- Landscape phones get a full-bleed layout, matched on viewport height so large phones get it too.
+- **Desktop and laptop** keep the fixed 900×700 page: toolbar across the top, HUD to the left of the board.
+- **Landscape phones** (viewport height ≤ 540 px) and **tablets** (coarse pointer, shorter side 600–1024 px) get the compact layout. The canvas fills the viewport, the board is drawn through a scaled viewport, and the controls move into a panel with tap targets of at least 44 px:
+  - Landscape: utilities (crumbs, invasion, Ant Eater, glove, pause, main menu, debug) on the left, the board in the middle, a 3×4 item grid on the right.
+  - Portrait tablets: the board on top, then the invasion bar, a row of utilities and a 6×2 item grid.
+  - Menus are scaled to fit their panel region rather than the whole 900×700 world.
+- Portrait phones keep the desktop page with a hint to rotate to landscape.
 - Marble style and campaign progress are saved in `localStorage`; if storage is unavailable the game says so and keeps them for the session only.
 
 ## 9. Possible future work
@@ -146,5 +151,6 @@ Modifier keys are ignored, so browser shortcuts such as Cmd+1 or Ctrl+- are not 
 - More marble types (e.g. magnet, bouncing, splash)
 - Sound and music, high scores
 - Campaign levels for the mite, digger and giant Queen, which are free-play only today
-- A phone layout with larger tap targets than the shared 900×700 toolbar allows
+- A portrait phone layout; the compact layout could serve it, but the board would be very small
+- Larger menu buttons on landscape phones, where the menu panel is height-limited
 - Screen-reader support, which the canvas-only UI cannot offer

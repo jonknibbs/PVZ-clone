@@ -27,32 +27,51 @@ import {
   toolbarSlot,
 } from './layout';
 import { getMenuButtons } from './menus';
+import {
+  activeTransform,
+  type ControlPanel,
+  DESKTOP_LAYOUT,
+  type Layout,
+  toWorld,
+} from './viewport';
 
 export function canvasPoint(
   canvas: HTMLCanvasElement,
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
+  size: { width: number; height: number } = { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
 ): Point {
   const bounds = canvas.getBoundingClientRect();
   // The bounding box includes the decorative border, so measure the content box instead.
   const innerWidth = canvas.clientWidth || bounds.width;
   const innerHeight = canvas.clientHeight || bounds.height;
   return {
-    x: ((event.clientX - bounds.left - (canvas.clientLeft || 0)) * CANVAS_WIDTH) / innerWidth,
-    y: ((event.clientY - bounds.top - (canvas.clientTop || 0)) * CANVAS_HEIGHT) / innerHeight,
+    x: ((event.clientX - bounds.left - (canvas.clientLeft || 0)) * size.width) / innerWidth,
+    y: ((event.clientY - bounds.top - (canvas.clientTop || 0)) * size.height) / innerHeight,
   };
 }
 
-export function bindInput(canvas: HTMLCanvasElement, game: Game): () => void {
+export function bindInput(
+  canvas: HTMLCanvasElement,
+  game: Game,
+  getLayout: () => Layout = () => DESKTOP_LAYOUT,
+): () => void {
   const controller = new AbortController();
   const options = { signal: controller.signal };
+  const pointFrom = (event: PointerEvent) => canvasPoint(canvas, event, getLayout());
   const movePointer = (point: Point) => {
-    game.state.pointer = point;
-    canvas.style.cursor = cursorFor(game, point);
+    const layout = getLayout();
+    game.state.pointer = toWorld(activeTransform(layout, game.state.screen), point);
+    const overPanel =
+      layout.panel &&
+      game.state.screen === 'play' &&
+      !game.state.confirmQuit &&
+      panelControls(layout.panel).some((control) => containsPoint(point, control));
+    canvas.style.cursor = overPanel ? 'pointer' : cursorFor(game, game.state.pointer);
   };
   canvas.addEventListener(
     'pointermove',
     (event) => {
-      movePointer(canvasPoint(canvas, event as PointerEvent));
+      movePointer(pointFrom(event as PointerEvent));
     },
     options,
   );
@@ -69,11 +88,11 @@ export function bindInput(canvas: HTMLCanvasElement, game: Game): () => void {
     (event) => {
       const pointerEvent = event as PointerEvent;
       if (pointerEvent.button === 0) {
-        const point = canvasPoint(canvas, pointerEvent);
+        const point = pointFrom(pointerEvent);
         // A tap has no hover, so move the pointer first: the placement preview
         // and button highlights then follow the finger.
         movePointer(point);
-        handlePointerDown(game, point);
+        handleCanvasPointer(game, getLayout(), point);
       }
     },
     options,
@@ -84,7 +103,7 @@ export function bindInput(canvas: HTMLCanvasElement, game: Game): () => void {
       (event) => {
         // Touch has no resting pointer, so clear it and leave no button looking hovered.
         if ((event as PointerEvent).pointerType !== 'mouse' || name === 'pointerleave') {
-          movePointer(OFF_SCREEN_POINTER);
+          game.state.pointer = OFF_SCREEN_POINTER;
         }
       },
       options,
@@ -106,6 +125,10 @@ export function bindInput(canvas: HTMLCanvasElement, game: Game): () => void {
 }
 
 const OFF_SCREEN_POINTER: Point = { x: -1, y: -1 };
+
+function panelControls(panel: ControlPanel) {
+  return [panel.pause, panel.menu, panel.debug, panel.eater, panel.glove, ...panel.slots];
+}
 
 export function pauseForInterruption(game: Game) {
   if (game.state.screen === 'play' && !game.state.paused) {
@@ -202,22 +225,89 @@ export function handlePointerDown(game: Game, point: Point) {
   }
   // The toolbar is painted over the board, so it must win any click it covers.
   if (point.y < TOOLBAR_HEIGHT) {
-    for (const key of game.state.availableItems) {
-      const index = game.state.availableItems.indexOf(key);
-      if (containsPoint(point, toolbarSlot(index))) {
-        const wasActive = game.state.selectedItem === key;
-        cancelSelection(game);
-        game.state.selectedItem = wasActive ? null : key;
-        return;
-      }
-    }
-    if (containsPoint(point, TOOL_BUTTONS.glove)) {
+    const index = game.state.availableItems.findIndex((_, slot) =>
+      containsPoint(point, toolbarSlot(slot)),
+    );
+    if (index >= 0) {
+      selectItemSlot(game, index);
+    } else if (containsPoint(point, TOOL_BUTTONS.glove)) {
       toggleGlove(game);
     } else if (containsPoint(point, TOOL_BUTTONS.eater)) {
       callAnteater(game);
     }
     return;
   }
+  handleBoardPointer(game, point);
+}
+
+/** Selects a toolbar item, or deselects it when it is already selected. */
+export function selectItemSlot(game: Game, index: number) {
+  const key = game.state.availableItems[index];
+  if (!key) {
+    return;
+  }
+  const wasActive = game.state.selectedItem === key;
+  cancelSelection(game);
+  game.state.selectedItem = wasActive ? null : key;
+}
+
+/**
+ * Compact layout: the point is in canvas pixels. Panel controls are hit-tested
+ * directly; anything over the board is converted to world coordinates.
+ */
+export function handleCanvasPointer(game: Game, layout: Layout, point: Point) {
+  const world = toWorld(activeTransform(layout, game.state.screen), point);
+  const panel = layout.panel;
+  if (layout.kind === 'desktop' || !panel || game.state.screen !== 'play') {
+    handlePointerDown(game, world);
+    return;
+  }
+  if (game.state.confirmQuit) {
+    handlePointerDown(game, world);
+    return;
+  }
+  if (containsPoint(point, panel.pause)) {
+    togglePause(game);
+    return;
+  }
+  if (containsPoint(point, panel.menu)) {
+    requestQuit(game);
+    return;
+  }
+  if (containsPoint(point, panel.debug)) {
+    toggleDebug(game);
+    return;
+  }
+  if (game.state.paused) {
+    return;
+  }
+  const slot = panel.slots.findIndex((rectangle) => containsPoint(point, rectangle));
+  if (slot >= 0) {
+    selectItemSlot(game, slot);
+    return;
+  }
+  if (containsPoint(point, panel.eater)) {
+    callAnteater(game);
+    return;
+  }
+  if (containsPoint(point, panel.glove)) {
+    toggleGlove(game);
+    return;
+  }
+  if (game.debug) {
+    const ant = layout.debugAnts.findIndex((button) => containsPoint(point, button));
+    if (ant >= 0) {
+      spawnAnt(game, ANT_TYPES[ant], Math.floor(game.random() * LANE_COUNT));
+      return;
+    }
+  }
+  if (layout.boardClip && containsPoint(point, layout.boardClip)) {
+    handleBoardPointer(game, world);
+  }
+}
+
+/** A click or tap on the board itself, in world coordinates. */
+export function handleBoardPointer(game: Game, point: Point) {
   for (const crumb of game.state.crumbDrops) {
     if (Math.hypot(crumb.x - point.x, crumb.y - point.y) < 24) {
       game.state.crumbs += crumb.value;

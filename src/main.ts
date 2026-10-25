@@ -1,4 +1,4 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from './game/constants';
+import { ANT_TYPES } from './game/definitions';
 import { createGame } from './game/game';
 import { createBrowserPreferenceStore, createMemoryPreferenceStore } from './game/preferences';
 import { updateGame } from './game/simulation';
@@ -7,6 +7,7 @@ import type { RenderContext } from './rendering/context';
 import { renderGame } from './rendering/renderer';
 import './styles.css';
 import { bindInput } from './ui/input';
+import { chooseLayoutKind, computeCompactLayout, DESKTOP_LAYOUT, type Layout } from './ui/viewport';
 
 function required<T>(value: T | null, message: string): T {
   if (!value) {
@@ -30,31 +31,52 @@ try {
 }
 const game = createGame({ preferenceStore });
 const view: RenderContext = { game, ctx };
-const unbindInput = bindInput(canvas, game);
+const coarsePointer = window.matchMedia('(pointer: coarse)');
+let layout: Layout = DESKTOP_LAYOUT;
+const unbindInput = bindInput(canvas, game, () => layout);
 let previousFrame = performance.now();
 let frameRequest = 0;
 
 /**
+ * Landscape phones and tablets get the compact layout: the canvas fills the
+ * viewport and its logical size is the CSS size, so controls are sized in real
+ * pixels. Everything else keeps the fixed 900x700 desktop page.
+ */
+function chooseLayout(): Layout {
+  const kind = chooseLayoutKind(window.innerWidth, window.innerHeight, coarsePointer.matches);
+  document.documentElement.classList.toggle('compact', kind === 'compact');
+  if (kind === 'desktop') {
+    return DESKTOP_LAYOUT;
+  }
+  return computeCompactLayout(
+    canvas.clientWidth || window.innerWidth,
+    canvas.clientHeight || window.innerHeight,
+    ANT_TYPES.length,
+  );
+}
+
+/**
  * Gives the canvas a bitmap that matches the display, then scales the context so
- * the rest of the game can keep drawing in logical 900x700 coordinates.
+ * the rest of the game can draw in the layout's logical coordinates.
  */
 function matchDisplayDensity() {
   const ratio = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
-  const width = Math.round(CANVAS_WIDTH * ratio);
-  const height = Math.round(CANVAS_HEIGHT * ratio);
+  const width = Math.round(layout.width * ratio);
+  const height = Math.round(layout.height * ratio);
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
   }
-  ctx.setTransform(width / CANVAS_WIDTH, 0, 0, height / CANVAS_HEIGHT, 0, 0);
+  ctx.setTransform(width / layout.width, 0, 0, height / layout.height, 0, 0);
 }
 
 function frame(now: number) {
   const deltaSeconds = Math.min(0.05, (now - previousFrame) / 1000);
   previousFrame = now;
   updateGame(game, deltaSeconds);
+  layout = chooseLayout();
   matchDisplayDensity();
-  renderGame(view);
+  renderGame(view, layout);
   frameRequest = requestAnimationFrame(frame);
 }
 

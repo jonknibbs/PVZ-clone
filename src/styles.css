@@ -101,3 +101,28 @@ p {
     box-shadow: none;
   }
 }
+
+/*
+ * Compact layout (landscape phones and tablets, chosen in main.ts): the canvas
+ * fills the viewport and the game lays its controls out around the board.
+ */
+html.compact body {
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+}
+html.compact h1,
+html.compact body > p {
+  display: none;
+}
+html.compact canvas {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
