@@ -10,7 +10,7 @@ import {
   togglePause,
 } from '../game/actions';
 import { spawnAnt } from '../game/combat';
-import { LANE_COUNT, TOOLBAR_HEIGHT } from '../game/constants';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, LANE_COUNT, TOOLBAR_HEIGHT } from '../game/constants';
 import { ANT_TYPES } from '../game/definitions';
 import { resetGame } from '../game/game';
 import type { Game, Point } from '../game/types';
@@ -21,6 +21,8 @@ import {
   laneAt,
   MENU_BUTTON,
   PAUSE_BUTTON,
+  QUIT_CANCEL_BUTTON,
+  QUIT_CONFIRM_BUTTON,
   TOOL_BUTTONS,
   toolbarSlot,
 } from './layout';
@@ -31,9 +33,12 @@ export function canvasPoint(
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
 ): Point {
   const bounds = canvas.getBoundingClientRect();
+  // The bounding box includes the decorative border, so measure the content box instead.
+  const innerWidth = canvas.clientWidth || bounds.width;
+  const innerHeight = canvas.clientHeight || bounds.height;
   return {
-    x: ((event.clientX - bounds.left) * canvas.width) / bounds.width,
-    y: ((event.clientY - bounds.top) * canvas.height) / bounds.height,
+    x: ((event.clientX - bounds.left - (canvas.clientLeft || 0)) * CANVAS_WIDTH) / innerWidth,
+    y: ((event.clientY - bounds.top - (canvas.clientTop || 0)) * CANVAS_HEIGHT) / innerHeight,
   };
 }
 
@@ -79,17 +84,19 @@ export function handlePointerDown(game: Game, point: Point) {
     }
     return;
   }
-  const pauseButton = PAUSE_BUTTON;
-  if (containsPoint(point, MENU_BUTTON)) {
-    resetGame(game);
+  if (game.state.confirmQuit) {
+    if (containsPoint(point, QUIT_CONFIRM_BUTTON)) {
+      resetGame(game);
+    } else if (containsPoint(point, QUIT_CANCEL_BUTTON)) {
+      cancelQuit(game);
+    }
     return;
   }
-  if (
-    point.x >= pauseButton.x &&
-    point.x <= pauseButton.x + pauseButton.width &&
-    point.y >= pauseButton.y &&
-    point.y <= pauseButton.y + pauseButton.height
-  ) {
+  if (containsPoint(point, MENU_BUTTON)) {
+    requestQuit(game);
+    return;
+  }
+  if (containsPoint(point, PAUSE_BUTTON)) {
     togglePause(game);
     return;
   }
@@ -102,47 +109,36 @@ export function handlePointerDown(game: Game, point: Point) {
   }
   if (game.debug) {
     for (let index = 0; index < ANT_TYPES.length; index++) {
-      const button = debugAntButton(index);
-      if (
-        point.x >= button.x &&
-        point.x <= button.x + button.width &&
-        point.y >= button.y &&
-        point.y <= button.y + button.height
-      ) {
-        const time = ANT_TYPES[index];
-        spawnAnt(game, time, Math.floor(game.random() * LANE_COUNT));
+      if (containsPoint(point, debugAntButton(index))) {
+        spawnAnt(game, ANT_TYPES[index], Math.floor(game.random() * LANE_COUNT));
         return;
       }
     }
   }
-  for (const definition of game.state.crumbDrops) {
-    if (Math.hypot(definition.x - point.x, definition.y - point.y) < 24) {
-      game.state.crumbs += definition.value;
-      definition.lifeRemaining = 0;
-      return;
-    }
-  }
+  // The toolbar is painted over the board, so it must win any click it covers.
   if (point.y < TOOLBAR_HEIGHT) {
     for (const key of game.state.availableItems) {
       const index = game.state.availableItems.indexOf(key);
-      const shape = toolbarSlot(index);
-      if (
-        point.x >= shape.x &&
-        point.x <= shape.x + shape.width &&
-        point.y >= shape.y &&
-        point.y <= shape.y + shape.height
-      ) {
+      if (containsPoint(point, toolbarSlot(index))) {
         const wasActive = game.state.selectedItem === key;
         cancelSelection(game);
         game.state.selectedItem = wasActive ? null : key;
+        return;
       }
     }
-    if (point.x >= TOOL_BUTTONS.glove.x) {
+    if (containsPoint(point, TOOL_BUTTONS.glove)) {
       toggleGlove(game);
-    } else if (point.x >= TOOL_BUTTONS.eater.x) {
+    } else if (containsPoint(point, TOOL_BUTTONS.eater)) {
       callAnteater(game);
     }
     return;
+  }
+  for (const crumb of game.state.crumbDrops) {
+    if (Math.hypot(crumb.x - point.x, crumb.y - point.y) < 24) {
+      game.state.crumbs += crumb.value;
+      crumb.lifeRemaining = 0;
+      return;
+    }
   }
   const lane = laneAt(point);
   if (lane < 0) {
@@ -177,9 +173,23 @@ export function handlePointerDown(game: Game, point: Point) {
     if (trackPiece) {
       trackPiece.strength = ((trackPiece.strength || 4) % 4) + 1;
       trackPiece.pulseRemaining = 0.3;
-      showNotification(game, 'Spring strength ' + trackPiece.strength + '/4');
+      showNotification(game, 'Spring strength ' + trackPiece.strength + '/4', 'info');
     }
   }
+}
+
+/** Pauses and asks before throwing away a run, so a stray tap cannot end it. */
+export function requestQuit(game: Game) {
+  if (game.state.screen !== 'play') {
+    return;
+  }
+  game.state.confirmQuit = true;
+  game.state.paused = true;
+}
+
+export function cancelQuit(game: Game) {
+  game.state.confirmQuit = false;
+  game.state.paused = false;
 }
 
 export function handleKeyDown(game: Game, event: Pick<KeyboardEvent, 'key' | 'preventDefault'>) {
@@ -189,6 +199,14 @@ export function handleKeyDown(game: Game, event: Pick<KeyboardEvent, 'key' | 'pr
     return;
   }
   if (game.state.screen !== 'play') {
+    return;
+  }
+  if (game.state.confirmQuit) {
+    if (event.key === 'Escape') {
+      cancelQuit(game);
+    } else if (event.key === 'Enter') {
+      resetGame(game);
+    }
     return;
   }
   if (event.key === 'p' || event.key === 'P') {
@@ -204,7 +222,7 @@ export function handleKeyDown(game: Game, event: Pick<KeyboardEvent, 'key' | 'pr
   if (event.key === 'g' || event.key === 'G') {
     toggleGlove(game);
   }
-  if (event.key === 'event' || event.key === 'E') {
+  if (event.key === 'e' || event.key === 'E') {
     callAnteater(game);
   }
   const index =

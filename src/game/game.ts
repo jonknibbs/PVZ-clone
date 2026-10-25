@@ -39,6 +39,8 @@ function createState(pointer = { x: 0, y: 0 }): Game['state'] {
     crumbIntervalJitter: 3,
     screen: 'menu',
     paused: false,
+    confirmQuit: false,
+    debugUsed: false,
     pointer: pointer,
     spawnQueue: [],
     notification: null,
@@ -52,7 +54,6 @@ export function createGame(
   options: {
     random?: () => number;
     preferenceStore?: PreferenceStore;
-    schedule?: Game['schedule'];
   } = {},
 ): Game {
   const preferenceStore = options.preferenceStore ?? createMemoryPreferenceStore();
@@ -61,14 +62,10 @@ export function createGame(
     mode: 'free',
     levelIndex: 0,
     debug: false,
+    debugCrumbsBackup: null,
     preferences: preferenceStore.load(),
     preferenceStore,
     random: options.random ?? Math.random,
-    schedule:
-      options.schedule ??
-      ((callback, delay) => {
-        setTimeout(callback, delay);
-      }),
   };
   resetGame(game);
   return game;
@@ -76,6 +73,7 @@ export function createGame(
 
 export function resetGame(game: Game) {
   game.state = createState(game.state.pointer);
+  game.debugCrumbsBackup = null;
   buildFreePlaySchedule(game);
 }
 
@@ -170,7 +168,7 @@ export function buildFreePlaySchedule(game: Game) {
       type = 'red';
     }
     schedule.push([spawnTime, type]);
-    if (index > 0 && index % 20 == 0) {
+    if (index > 0 && index % 20 === 0) {
       for (let extraIndex = 0; extraIndex < 4; extraIndex++) {
         schedule.push([spawnTime + extraIndex * 0.8, 'basic']);
       }

@@ -40,7 +40,11 @@ export function updateGame(game: Game, deltaSeconds: number) {
 
 function updateFrameTimers(game: Game, deltaSeconds: number) {
   if (game.debug) {
+    if (game.debugCrumbsBackup === null) {
+      game.debugCrumbsBackup = game.state.crumbs;
+    }
     game.state.crumbs = 9999;
+    game.state.debugUsed = true;
     for (const itemType of ITEM_ORDER) {
       game.state.cooldowns[itemType] = 0;
     }
@@ -166,7 +170,8 @@ function updateTransientEffects(game: Game, deltaSeconds: number) {
 function checkVictory(game: Game) {
   if (!game.state.spawnQueue.length && !game.state.ants.length) {
     game.state.screen = 'win';
-    if (game.mode === 'campaign') {
+    // A win with debug mode's infinite crumbs should not unlock the next level.
+    if (game.mode === 'campaign' && !game.state.debugUsed) {
       unlockLevel(game, game.levelIndex + 2);
     }
   }

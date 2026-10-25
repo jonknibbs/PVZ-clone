@@ -24,6 +24,8 @@ export type Screen = 'menu' | 'settings' | 'levels' | 'intro' | 'play' | 'win' |
 
 export type MarbleStyle = 'original' | 'classic' | 'character';
 
+export type NotificationTone = 'error' | 'info';
+
 export interface Point {
   x: number;
   y: number;
@@ -111,6 +113,8 @@ export interface Marble {
   isFalling: boolean;
   lastTrackPiece: TrackPiece | null;
   laneOffsetX: number;
+  /** Counts down to the Twin's follow-up shot, so it stops while the game is paused. */
+  twinShotRemaining?: number;
   boosted?: boolean;
   isBlockedByAnt?: boolean;
   isRolling?: boolean;
@@ -267,11 +271,14 @@ export interface GameState {
   crumbIntervalJitter: number;
   screen: Screen;
   paused: boolean;
+  confirmQuit: boolean;
+  debugUsed: boolean;
   pointer: Point;
   spawnQueue: SpawnEvent[];
   notification: {
     text: string;
     lifeRemaining: number;
+    tone: NotificationTone;
   } | null;
   availableItems: ItemType[];
   abilities: {
@@ -298,8 +305,9 @@ export interface Game {
   mode: GameMode;
   levelIndex: number;
   debug: boolean;
+  /** Crumb count to put back when debug mode is switched off. */
+  debugCrumbsBackup: number | null;
   preferences: Preferences;
   random: () => number;
   preferenceStore: PreferenceStore;
-  schedule: (callback: () => void, delay: number) => void;
 }

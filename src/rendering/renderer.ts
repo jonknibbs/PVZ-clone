@@ -2,6 +2,8 @@ import {
   BOARD_BOTTOM,
   BOARD_X,
   BOARD_Y,
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
   LANE_COUNT,
   LANE_LENGTH,
   LANE_WIDTH,
@@ -10,7 +12,17 @@ import {
   TOOLBAR_HEIGHT,
 } from '../game/constants';
 import { ANT_DEFINITIONS, ANT_TYPES, CAMPAIGN_LEVELS } from '../game/definitions';
-import { DEBUG_BUTTON, debugAntButton, laneAt, MENU_BUTTON, PAUSE_BUTTON } from '../ui/layout';
+import {
+  containsPoint,
+  DEBUG_BUTTON,
+  debugAntButton,
+  laneAt,
+  MENU_BUTTON,
+  PAUSE_BUTTON,
+  QUIT_CANCEL_BUTTON,
+  QUIT_CONFIRM_BUTTON,
+  QUIT_DIALOG,
+} from '../ui/layout';
 import { drawAnt, drawAnteater } from './ants';
 import { drawBoard } from './board';
 import type { RenderContext } from './context';
@@ -26,6 +38,73 @@ export function renderGame(view: RenderContext) {
   drawPlacementPreview(view);
   drawEntities(view);
   drawStatus(view);
+  drawQuitConfirmation(view);
+  // Drawn last so a warning is never hidden behind the win or lose panel.
+  drawNotification(view);
+}
+
+function drawNotification(view: RenderContext) {
+  const { ctx, game } = view;
+  const notification = game.state.notification;
+  if (!notification) {
+    return;
+  }
+  const centerX = BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2;
+  // Menu panels own the middle of the board, so sit above them when one is open.
+  const centerY = game.state.screen === 'play' ? BOARD_Y + LANE_LENGTH / 2 : 40;
+  const accent = notification.tone === 'info' ? '#cfe8a8' : '#ff8a80';
+  ctx.font = 'bold 18px sans-serif';
+  const width = Math.min(560, ctx.measureText(notification.text).width + 40);
+  ctx.fillStyle = 'rgba(10,22,18,.88)';
+  roundedRect(view, centerX - width / 2, centerY - 25, width, 36, 10);
+  ctx.fill();
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 1.5;
+  roundedRect(view, centerX - width / 2, centerY - 25, width, 36, 10);
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.textAlign = 'center';
+  ctx.fillText(notification.text, centerX, centerY);
+}
+
+function drawQuitConfirmation(view: RenderContext) {
+  const { ctx, game } = view;
+  if (game.state.screen !== 'play' || !game.state.confirmQuit) {
+    return;
+  }
+  const centerX = QUIT_DIALOG.x + QUIT_DIALOG.width / 2;
+  ctx.fillStyle = 'rgba(8,19,16,.72)';
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  ctx.fillStyle = 'rgba(34,59,48,.98)';
+  roundedRect(view, QUIT_DIALOG.x, QUIT_DIALOG.y, QUIT_DIALOG.width, QUIT_DIALOG.height, 18);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(230,204,142,.55)';
+  ctx.lineWidth = 2;
+  roundedRect(view, QUIT_DIALOG.x, QUIT_DIALOG.y, QUIT_DIALOG.width, QUIT_DIALOG.height, 18);
+  ctx.stroke();
+  ctx.fillStyle = '#fff4d8';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 22px "Trebuchet MS",sans-serif';
+  ctx.fillText('Leave this game?', centerX, QUIT_DIALOG.y + 48);
+  ctx.fillStyle = '#e2e7d4';
+  ctx.font = '14px "Trebuchet MS",sans-serif';
+  ctx.fillText('This run will be lost.', centerX, QUIT_DIALOG.y + 74);
+  for (const [button, label] of [
+    [QUIT_CONFIRM_BUTTON, 'Main menu'],
+    [QUIT_CANCEL_BUTTON, 'Keep playing'],
+  ] as const) {
+    const hot = containsPoint(game.state.pointer, button);
+    ctx.fillStyle = hot ? '#e8cd80' : '#77583d';
+    roundedRect(view, button.x, button.y, button.width, button.height, 10);
+    ctx.fill();
+    ctx.strokeStyle = hot ? '#fff0bd' : 'rgba(255,240,192,.4)';
+    ctx.lineWidth = 1;
+    roundedRect(view, button.x + 0.5, button.y + 0.5, button.width - 1, button.height - 1, 10);
+    ctx.stroke();
+    ctx.fillStyle = hot ? '#2c2415' : '#fff4d8';
+    ctx.font = 'bold 15px "Trebuchet MS",sans-serif';
+    ctx.fillText(label, button.x + button.width / 2, button.y + 27);
+  }
 }
 
 function drawDebugPanel(view: RenderContext) {
@@ -125,8 +204,8 @@ function drawEntities(view: RenderContext) {
       drawAnteater(view, laneCenterX(lane), game.state.anteater.y, 1, 1);
     }
   }
-  for (const shard of game.state.projectiles) {
-    drawSphere(view, shard.x, shard.y, 6, shard.ice ? '#8cf' : '#f66');
+  for (const projectile of game.state.projectiles) {
+    drawSphere(view, projectile.x, projectile.y, 6, projectile.ice ? '#8cf' : '#f66');
   }
   for (const effect of game.state.effects) {
     const type = effect.elapsed / effect.duration;
@@ -187,17 +266,7 @@ function drawStatus(view: RenderContext) {
   ctx.fillStyle = progress;
   roundedRect(view, 28, BOARD_Y + 36, 132 * invasionProgress, 8, 4);
   ctx.fill();
-  if (game.state.notification) {
-    ctx.fillStyle = '#ff8a80';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      game.state.notification.text,
-      BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2,
-      BOARD_Y + LANE_LENGTH / 2,
-    );
-  }
-  if (game.state.screen === 'play' && game.state.paused) {
+  if (game.state.screen === 'play' && game.state.paused && !game.state.confirmQuit) {
     ctx.fillStyle = 'rgba(0,0,0,.55)';
     ctx.fillRect(0, TOOLBAR_HEIGHT, canvas.width, canvas.height - TOOLBAR_HEIGHT);
     ctx.fillStyle = '#fff';

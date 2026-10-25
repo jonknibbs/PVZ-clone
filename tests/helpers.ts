@@ -10,7 +10,7 @@ export function seededRandom(initialSeed = 123456) {
 }
 
 export function testGame(): Game {
-  const game = createGame({ random: seededRandom(), schedule: () => {} });
+  const game = createGame({ random: seededRandom() });
   startGame(game, 'free', 0);
   game.state.spawnQueue = [[9999, 'basic']];
   game.state.nextCrumbIn = 9999;

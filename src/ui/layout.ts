@@ -11,7 +11,10 @@ import type { Point, Rectangle } from '../game/types';
 export const PAUSE_BUTTON = { x: 20, y: BOARD_Y + 69, width: 130, height: 28 };
 export const MENU_BUTTON = { x: 20, y: BOARD_Y + 103, width: 130, height: 28 };
 export const DEBUG_BUTTON = { x: 20, y: BOARD_Y + 137, width: 130, height: 38 };
-export const TOOL_BUTTONS = { eater: { x: 680, width: 68 }, glove: { x: 752, width: 138 } };
+export const TOOL_BUTTONS = {
+  eater: { x: 680, y: 8, width: 68, height: 88 },
+  glove: { x: 752, y: 8, width: 138, height: 88 },
+};
 export const toolbarSlot = (index: number) => ({
   x: 103 + index * 48,
   y: 8,
@@ -24,6 +27,9 @@ export const debugAntButton = (index: number) => ({
   width: 70,
   height: 30,
 });
+export const QUIT_DIALOG = { x: 280, y: 286, width: 340, height: 164 };
+export const QUIT_CONFIRM_BUTTON = { x: 300, y: 388, width: 140, height: 42 };
+export const QUIT_CANCEL_BUTTON = { x: 460, y: 388, width: 140, height: 42 };
 export const containsPoint = (point: Point, bounds: Rectangle) =>
   point.x >= bounds.x &&
   point.x <= bounds.x + bounds.width &&
