@@ -214,11 +214,17 @@ function drawWrappedText(
   maxWidth: number,
   lineHeight: number,
 ) {
+  wrapText(text, maxWidth, (candidate) => ctx.measureText(candidate).width).forEach((line, index) =>
+    ctx.fillText(line, centerX, y + index * lineHeight),
+  );
+}
+
+export function wrapText(text: string, maxWidth: number, measure: (text: string) => number) {
   const lines: string[] = [];
   let line = '';
   for (const word of text.split(/\s+/)) {
     const candidate = line ? `${line} ${word}` : word;
-    if (line && ctx.measureText(candidate).width > maxWidth) {
+    if (line && measure(candidate) > maxWidth) {
       lines.push(line);
       line = word;
     } else {
@@ -228,5 +234,5 @@ function drawWrappedText(
   if (line) {
     lines.push(line);
   }
-  lines.forEach((line, index) => ctx.fillText(line, centerX, y + index * lineHeight));
+  return lines;
 }

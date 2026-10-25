@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { laneCenterX } from '../src/game/constants';
 import { ANT_TYPES } from '../src/game/definitions';
+import { startGame } from '../src/game/game';
 import type { Rectangle } from '../src/game/types';
 import { handleCanvasPointer } from '../src/ui/input';
 import {
@@ -118,6 +119,7 @@ test('compact taps select from the panel and place on the board through the view
 
 test('compact pause, menu, glove and debug buttons work, and pause blocks the rest', () => {
   const game = testGame();
+  game.debugAvailable = true;
   const layout = computeCompactLayout(768, 1024, ANT_TYPES.length);
   const panel = layout.panel;
   assert.ok(panel);
@@ -141,6 +143,21 @@ test('compact pause, menu, glove and debug buttons work, and pause blocks the re
   // Panel controls are inert behind the confirmation dialog.
   handleCanvasPointer(game, layout, centre(panel.pause));
   assert.equal(game.state.confirmQuit, true);
+});
+
+test('compact tutorial buttons advance and skip the guided lesson', () => {
+  const game = testGame();
+  startGame(game, 'tutorial', 0);
+  const layout = computeCompactLayout(844, 390, ANT_TYPES.length);
+  const panel = layout.panel;
+  assert.ok(panel);
+
+  handleCanvasPointer(game, layout, centre(panel.pause));
+  assert.equal(game.state.tutorial?.step, 1);
+  handleCanvasPointer(game, layout, centre(panel.menu));
+  assert.equal(game.mode, 'campaign');
+  assert.equal(game.state.screen, 'intro');
+  assert.equal(game.preferences.tutorialDone, true);
 });
 
 test('menus in the compact layout are tapped through the menu viewport', () => {

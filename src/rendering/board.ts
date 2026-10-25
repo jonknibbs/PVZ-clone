@@ -125,8 +125,12 @@ export function drawBoard(view: RenderContext) {
   ctx.moveTo(BOARD_X + 12, BOARD_BOTTOM + 4);
   ctx.lineTo(BOARD_X + LANE_COUNT * LANE_WIDTH - 12, BOARD_BOTTOM + 4);
   ctx.stroke();
+  // label the hills from the side: centred under the board, the middle hill covered it
   ctx.fillStyle = '#edcf89';
   ctx.font = 'bold 12px "Trebuchet MS",sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('ANT HILLS', BOARD_X - 18, ANT_HILL_Y + 4);
+  ctx.textAlign = 'center';
   // Sits below the ant hills, which used to cover it.
   ctx.fillText('ANT TRAIL  ·  EXIT', BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2, BOARD_BOTTOM + 41);
   for (let lane = 0; lane < LANE_COUNT; lane++) {

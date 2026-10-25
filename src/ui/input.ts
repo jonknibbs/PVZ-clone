@@ -1,9 +1,11 @@
 import {
   callAnteater,
+  cancelQuit,
   cancelSelection,
   dropHeldItem,
   findNearestItem,
   placeItem,
+  requestQuit,
   showNotification,
   toggleDebug,
   toggleGlove,
@@ -13,6 +15,7 @@ import { spawnAnt } from '../game/combat';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, LANE_COUNT, TOOLBAR_HEIGHT } from '../game/constants';
 import { ANT_TYPES } from '../game/definitions';
 import { resetGame } from '../game/game';
+import { advanceTutorial, currentTutorialStep, finishTutorial } from '../game/tutorial';
 import type { Game, Point } from '../game/types';
 import {
   containsPoint,
@@ -25,6 +28,8 @@ import {
   QUIT_CONFIRM_BUTTON,
   TOOL_BUTTONS,
   toolbarSlot,
+  TUTORIAL_NEXT_BUTTON,
+  TUTORIAL_SKIP_BUTTON,
 } from './layout';
 import { getMenuButtons } from './menus';
 import {
@@ -35,8 +40,11 @@ import {
   toWorld,
 } from './viewport';
 
+// The backing store is scaled for the screen's pixel density, so map to the fixed game
+// coordinates rather than to canvas.width/height.
 export function canvasPoint(
-  canvas: HTMLCanvasElement,
+  canvas: Pick<HTMLCanvasElement, 'getBoundingClientRect'> &
+    Partial<Pick<HTMLCanvasElement, 'clientWidth' | 'clientHeight' | 'clientLeft' | 'clientTop'>>,
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
   size: { width: number; height: number } = { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
 ): Point {
@@ -215,6 +223,19 @@ export function handlePointerDown(game: Game, point: Point) {
   if (game.state.paused) {
     return;
   }
+  const tutorialStep = currentTutorialStep(game);
+  if (tutorialStep) {
+    if (containsPoint(point, TUTORIAL_SKIP_BUTTON)) {
+      finishTutorial(game);
+      return;
+    }
+    if (containsPoint(point, TUTORIAL_NEXT_BUTTON)) {
+      if (!tutorialStep.isComplete) {
+        advanceTutorial(game);
+      }
+      return;
+    }
+  }
   if (game.debug) {
     for (let index = 0; index < ANT_TYPES.length; index++) {
       if (containsPoint(point, debugAntButton(index))) {
@@ -264,6 +285,17 @@ export function handleCanvasPointer(game: Game, layout: Layout, point: Point) {
   }
   if (game.state.confirmQuit) {
     handlePointerDown(game, world);
+    return;
+  }
+  const tutorialStep = currentTutorialStep(game);
+  if (tutorialStep && containsPoint(point, panel.menu)) {
+    finishTutorial(game);
+    return;
+  }
+  if (tutorialStep && containsPoint(point, panel.pause)) {
+    if (!tutorialStep.isComplete) {
+      advanceTutorial(game);
+    }
     return;
   }
   if (containsPoint(point, panel.pause)) {
@@ -353,20 +385,6 @@ export function handleBoardPointer(game: Game, point: Point) {
   }
 }
 
-/** Pauses and asks before throwing away a run, so a stray tap cannot end it. */
-export function requestQuit(game: Game) {
-  if (game.state.screen !== 'play') {
-    return;
-  }
-  game.state.confirmQuit = true;
-  game.state.paused = true;
-}
-
-export function cancelQuit(game: Game) {
-  game.state.confirmQuit = false;
-  game.state.paused = false;
-}
-
 export type GameKeyEvent = Pick<KeyboardEvent, 'key' | 'preventDefault'> &
   Partial<Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'altKey'>>;
 
@@ -375,7 +393,7 @@ export function handleKeyDown(game: Game, event: GameKeyEvent) {
   if (event.ctrlKey || event.metaKey || event.altKey) {
     return;
   }
-  if (event.key === 'F2') {
+  if (event.key === 'F2' && game.debugAvailable) {
     event.preventDefault();
     toggleDebug(game);
     return;
@@ -407,6 +425,10 @@ export function handleKeyDown(game: Game, event: GameKeyEvent) {
   }
   if (event.key === 'e' || event.key === 'E') {
     callAnteater(game);
+  }
+  const tutorialStep = currentTutorialStep(game);
+  if (event.key === 'Enter' && tutorialStep && !tutorialStep.isComplete) {
+    advanceTutorial(game);
   }
   const index =
     event.key === '0'

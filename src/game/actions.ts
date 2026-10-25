@@ -68,8 +68,10 @@ export function placeItem(game: Game, type: ItemType, lane: number, y: number) {
   if (!validatePlacement(game, type, lane, y)) {
     return false;
   }
-  game.state.crumbs -= definition.cost;
-  game.state.cooldowns[type] = definition.cooldown;
+  if (!game.debug) {
+    game.state.crumbs -= definition.cost;
+    game.state.cooldowns[type] = definition.cooldown;
+  }
   if (isTrackType(type)) {
     game.state.trackPieces.push({ type: type, lane: lane, y: y, pulseRemaining: 0, strength: 4 });
     return true;
@@ -115,6 +117,9 @@ export function showNotification(game: Game, text: string, tone: NotificationTon
 }
 
 export function toggleDebug(game: Game) {
+  if (!game.debugAvailable) {
+    return;
+  }
   game.debug = !game.debug;
   if (game.debug) {
     // Remember the real crumb count so switching debug off does not hand out 9,999 crumbs.
@@ -133,9 +138,23 @@ export function toggleDebug(game: Game) {
 }
 
 export function togglePause(game: Game) {
-  if (game.state.screen === 'play') {
+  if (game.state.screen === 'play' && !game.state.confirmQuit) {
     game.state.paused = !game.state.paused;
   }
+}
+
+/** Pauses and asks before leaving, so a stray tap on Main menu cannot end a run. */
+export function requestQuit(game: Game) {
+  if (game.state.screen !== 'play') {
+    return;
+  }
+  game.state.confirmQuit = true;
+  game.state.paused = true;
+}
+
+export function cancelQuit(game: Game) {
+  game.state.confirmQuit = false;
+  game.state.paused = false;
 }
 
 export function toggleGlove(game: Game) {

@@ -49,6 +49,7 @@ function key(
 
 test('menu buttons navigate campaign, intro, play, and settings', () => {
   const game = createGame();
+  game.preferences.tutorialDone = true;
   getMenuButtons(game)
     .find((button) => button.label === 'Campaign')
     ?.onClick();
@@ -115,12 +116,14 @@ test('keyboard selection, pause, cancellation, and debug retain their original b
   key(game, 'p');
   key(game, 'Escape');
   assert.equal(game.state.selectedItem, null);
+  game.debugAvailable = true;
   assert.equal(key(game, 'F2'), true);
   assert.equal(game.debug, true);
 });
 
 test('on-screen debug button toggles debug mode while playing or paused', () => {
   const game = testGame();
+  game.debugAvailable = true;
   const point = { x: DEBUG_BUTTON.x + DEBUG_BUTTON.width / 2, y: DEBUG_BUTTON.y + 19 };
   handlePointerDown(game, point);
   assert.equal(game.debug, true);
@@ -135,6 +138,7 @@ test('on-screen debug button toggles debug mode while playing or paused', () => 
 
 test('a debug win does not unlock the next campaign level', () => {
   const game = testGame();
+  game.debugAvailable = true;
   startGame(game, 'campaign', 0);
   game.state.screen = 'play';
   key(game, 'F2');
@@ -215,7 +219,7 @@ test('menus can be driven from the keyboard', () => {
   assert.equal(focusedMenuIndex(game), 1);
   key(game, 'ArrowUp');
   key(game, 'ArrowUp');
-  assert.equal(focusedMenuIndex(game), 2);
+  assert.equal(focusedMenuIndex(game), 3);
   key(game, 'ArrowDown');
   assert.equal(focusedMenuIndex(game), 0);
   key(game, 'Enter');

@@ -1,5 +1,6 @@
 import { CAMPAIGN_DIFFICULTY, CAMPAIGN_LEVELS, ITEM_ORDER } from './definitions';
 import { createMemoryPreferenceStore } from './preferences';
+import { beginTutorial, TUTORIAL_CRUMBS } from './tutorial';
 import type { AntType, CampaignLevel, Game, GameMode, PreferenceStore, SpawnEvent } from './types';
 
 function createState(pointer = { x: 0, y: 0 }): Game['state'] {
@@ -40,6 +41,7 @@ function createState(pointer = { x: 0, y: 0 }): Game['state'] {
     screen: 'menu',
     paused: false,
     confirmQuit: false,
+    tutorial: null,
     debugUsed: false,
     pointer: pointer,
     menuFocus: null,
@@ -55,6 +57,7 @@ export function createGame(
   options: {
     random?: () => number;
     preferenceStore?: PreferenceStore;
+    debugAvailable?: boolean;
   } = {},
 ): Game {
   const preferenceStore = options.preferenceStore ?? createMemoryPreferenceStore();
@@ -63,6 +66,7 @@ export function createGame(
     mode: 'free',
     levelIndex: 0,
     debug: false,
+    debugAvailable: options.debugAvailable ?? false,
     debugCrumbsBackup: null,
     preferences: preferenceStore.load(),
     preferenceStore,
@@ -93,6 +97,17 @@ export function startGame(game: Game, mode: GameMode, levelIndex: number) {
     game.state.antSpeedMultiplier = CAMPAIGN_DIFFICULTY.speed;
     buildCampaignSchedule(game, level, levelIndex);
     game.state.screen = 'intro';
+  } else if (mode === 'tutorial') {
+    // a scripted lesson: only the Shooter, no timed invasion, ants arrive when a step asks
+    const firstLevel = CAMPAIGN_LEVELS[0];
+    game.state.availableItems = ['red'];
+    game.state.abilities = { glove: false, eater: false };
+    game.state.crumbs = TUTORIAL_CRUMBS;
+    game.state.antHealthMultiplier = firstLevel.health;
+    game.state.antSpeedMultiplier = CAMPAIGN_DIFFICULTY.speed;
+    game.state.spawnQueue = [];
+    game.state.screen = 'play';
+    beginTutorial(game);
   } else {
     game.state.screen = 'play';
   }

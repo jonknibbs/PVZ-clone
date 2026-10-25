@@ -51,7 +51,8 @@ export function getMenuButtons(game: Game): MenuButton[] {
           game.state.screen = 'levels';
         }),
         button('Free Play', 392, () => startGame(game, 'free', 0)),
-        button('Settings', 454, () => {
+        button('How to Play', 454, () => startGame(game, 'tutorial', 0)),
+        button('Settings', 516, () => {
           game.state.screen = 'settings';
         }),
       ];
@@ -86,7 +87,10 @@ export function getMenuButtons(game: Game): MenuButton[] {
           label: String(levelIndex + 1),
           subtitle: level.name,
           locked: levelIndex >= game.preferences.unlockedLevels,
-          onClick: () => startGame(game, 'campaign', levelIndex),
+          onClick: () =>
+            levelIndex === 0 && !game.preferences.tutorialDone
+              ? startGame(game, 'tutorial', 0)
+              : startGame(game, 'campaign', levelIndex),
         })),
         button('Back', 540, () => resetGame(game)),
       ];

@@ -111,26 +111,29 @@ Defeated ants and marbles play a short fade/impact animation before being remove
 
 ## 6a. Game modes
 
-The main menu offers **Campaign** and **Free Play** (the full-length game above, everything unlocked).
+The main menu offers **Campaign**, **Free Play** (the full-length game above, everything unlocked), **How to Play** and **Settings**.
+
+**How to Play** is a seven-step guided tutorial with only the Shooter and no timed invasion. It shows the ant hills and crumbs, then spawns one ant in lane 3, has the player pick the Shooter and drop it on the ant, and finishes with collecting a crumb. Steps that wait for the player cannot be skipped with Next; **Skip tutorial** is always available. Finishing or skipping saves that the tutorial is done and opens level 1. Choosing level 1 from the campaign opens the tutorial first until it has been done once.
 
 Campaign is 10 short levels (~1 minute each). Each level starts with an intro screen listing what is new; marbles, ants, the glove (level 1) and the Ant Eater (level 3) are introduced gradually, and the bar only shows what has been unlocked so far. Level 1 has only the Shooter marble and basic ants; level 10 ends with the Queen. Campaign ants walk 25% faster, start with reduced health that scales up per level, and crumbs fall faster than in free play. Winning unlocks the next level (progress saved in localStorage); a **Main menu** button is available during play, which asks for confirmation first. The mite, digger and giant Queen appear in free play only.
 
 ## 7. Controls
 
-| Input                              | Action                                                       |
-| ---------------------------------- | ------------------------------------------------------------ |
-| Click bar slot / keys 1–9, 0, -, = | Select marble or track piece                                 |
-| E / Ant Eater button               | Call the Ant Eater                                           |
-| Click lane                         | Drop selected marble                                         |
-| Click lane with no tool selected   | Cycle the strength of a spring already there                 |
-| Click crumb                        | Collect                                                      |
-| G                                  | Toggle glove                                                 |
-| Right-click / Esc                  | Cancel selection                                             |
-| P / Pause button (left panel)      | Pause / resume (freezes the whole game)                      |
-| Main menu button (left panel)      | Ask to leave the run; Enter confirms, Esc keeps playing      |
-| F2 / Debug button                  | Debug mode: infinite crumbs, no cooldowns, ant spawn buttons |
-| Click on menu/win/lose screen      | Start / restart                                              |
-| Arrow keys / Enter on a menu       | Move between menu buttons and press the focused one          |
+| Input                                | Action                                                       |
+| ------------------------------------ | ------------------------------------------------------------ |
+| Click bar slot / keys 1–9, 0, -, =   | Select marble or track piece                                 |
+| E / Ant Eater button                 | Call the Ant Eater                                           |
+| Click lane                           | Drop selected marble                                         |
+| Click lane with no tool selected     | Cycle the strength of a spring already there                 |
+| Click crumb                          | Collect                                                      |
+| G                                    | Toggle glove                                                 |
+| Right-click / Esc                    | Cancel selection                                             |
+| P / Pause button (left panel)        | Pause / resume (freezes the whole game)                      |
+| Main menu button (left panel)        | Ask to leave the run; Enter confirms, Esc keeps playing      |
+| F2 / Debug button (development only) | Debug mode: infinite crumbs, no cooldowns, ant spawn buttons |
+| Click on menu/win/lose screen        | Start / restart                                              |
+| Arrow keys / Enter on a menu         | Move between menu buttons and press the focused one          |
+| Enter                                | Next tutorial step                                           |
 
 Modifier keys are ignored, so browser shortcuts such as Cmd+1 or Ctrl+- are not read as game input. Hiding the tab or switching window pauses the game. A debug-mode win does not unlock the next campaign level, and leaving debug mode puts the real crumb count back.
 
@@ -140,7 +143,7 @@ Modifier keys are ignored, so browser shortcuts such as Cmd+1 or Ctrl+- are not 
 - Touch is supported: tapping moves the placement preview as well as acting on the tap.
 - **Desktop and laptop** keep the fixed 900×700 page: toolbar across the top, HUD to the left of the board.
 - **Landscape phones** (viewport height ≤ 540 px) and **tablets** (coarse pointer, shorter side 600–1024 px) get the compact layout. The canvas fills the viewport, the board is drawn through a scaled viewport, and the controls move into a panel with tap targets of at least 44 px:
-  - Landscape: utilities (crumbs, invasion, Ant Eater, glove, pause, main menu, debug) on the left, the board in the middle, a 3×4 item grid on the right.
+  - Landscape: utilities (crumbs, invasion, Ant Eater, glove, pause, main menu, and debug in development) on the left, the board in the middle, a 3×4 item grid on the right.
   - Portrait tablets: the board on top, then the invasion bar, a row of utilities and a 6×2 item grid.
   - Menus are scaled to fit their panel region rather than the whole 900×700 world.
 - Portrait phones keep the desktop page with a hint to rotate to landscape.

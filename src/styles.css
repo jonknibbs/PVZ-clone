@@ -1,14 +1,22 @@
 * {
   box-sizing: border-box;
 }
+:root {
+  --cream: #f5f0dc;
+  --cream-muted: #c9d0bb;
+  --brass: #d5ae69;
+  --brass-light: #e8d09a;
+  --moss: #324c37;
+  --ink: #12251d;
+}
 body {
   /* Heading, help paragraph, body padding and the canvas border. */
   --page-chrome: 220px;
   min-height: 100svh;
   margin: 0;
-  padding: 18px 16px 24px;
+  padding: 18px 16px 40px;
   background: radial-gradient(ellipse at 50% 4%, #496b43 0, #243e32 44%, #172820 100%);
-  color: #f5f0dc;
+  color: var(--cream);
   font-family:
     'Trebuchet MS',
     Segoe UI,
@@ -21,62 +29,147 @@ body {
 h1 {
   margin: 0 0 12px;
   font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.2;
   letter-spacing: 0.04em;
   color: #fff5d8;
   text-shadow:
     0 3px 0 #274333,
     0 5px 18px #12251dcc;
 }
+/* The frame holds the border so the canvas itself maps 1:1 to pointer coordinates.
+   Its width keeps the whole board on screen below the heading. */
+.board-frame {
+  width: min(908px, 100%, calc((100svh - 90px) * 9 / 7 + 8px));
+  flex-shrink: 0;
+  border: 4px solid var(--brass);
+  border-radius: 15px;
+  overflow: hidden;
+  background: #182b26;
+  box-shadow:
+    0 0 0 5px var(--moss),
+    0 18px 55px #0b1915c9;
+}
 canvas {
   display: block;
-  /* The bitmap is scaled for the display, so the CSS size is set explicitly. */
-  box-sizing: content-box;
-  width: min(900px, calc(100% - 8px), calc((100svh - var(--page-chrome)) * 9 / 7));
+  width: 100%;
   height: auto;
-  aspect-ratio: 900 / 700;
-  background: #182b26;
-  border: 4px solid #d5ae69;
-  border-radius: 15px;
-  box-shadow:
-    0 0 0 5px #324c37,
-    0 18px 55px #0b1915c9;
+  aspect-ratio: 9 / 7;
   cursor: default;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
 }
-p {
-  margin: 15px 8px 0;
-  font-size: 13px;
-  line-height: 1.55;
-  color: #e2e7d4;
-  text-align: center;
-  max-width: 900px;
-}
 .mobile-hint {
   display: none;
 }
 
+.help {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px 48px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--cream);
+}
+@media (min-width: 760px) {
+  .help {
+    grid-template-columns: 1.15fr 1fr;
+  }
+}
+.help-column {
+  min-width: 0;
+}
+.help h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--brass-light);
+}
+.help h3 {
+  margin: 22px 0 8px;
+  font-size: 16px;
+  color: var(--brass-light);
+}
+.rules {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.rules li::marker {
+  color: var(--brass);
+}
+.pieces {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+}
+.pieces dt {
+  font-weight: bold;
+}
+.pieces dd {
+  margin: 0;
+  color: var(--cream-muted);
+}
+.keys {
+  width: 100%;
+  border-collapse: collapse;
+}
+.keys td {
+  padding: 7px 0;
+  border-bottom: 1px solid #ffffff1a;
+  vertical-align: top;
+}
+.keys td:first-child {
+  padding-right: 16px;
+  white-space: nowrap;
+}
+.keys td:last-child {
+  color: var(--cream-muted);
+}
+kbd {
+  display: inline-block;
+  min-width: 1.7em;
+  padding: 1px 6px;
+  border: 1px solid #e8d09a80;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #ffffff10;
+  font:
+    bold 13px/1.4 'Trebuchet MS',
+    sans-serif;
+  text-align: center;
+  color: var(--cream);
+}
+.note {
+  margin: 16px 0 0;
+  color: var(--cream-muted);
+}
+
 @media (max-width: 600px) {
   body {
-    justify-content: center;
-    padding: 12px 8px 20px;
+    padding: 12px 8px 28px;
   }
   h1 {
     margin-bottom: 10px;
   }
-  canvas {
-    width: min(900px, calc(100% - 6px));
+  .board-frame {
     border-width: 3px;
     border-radius: 10px;
   }
-  body > p:not(.mobile-hint) {
-    display: none;
-  }
   .mobile-hint {
     display: block;
-    margin-top: 10px;
+    margin: 12px 8px 0;
     font-size: 13px;
+    text-align: center;
+    color: var(--cream-muted);
+  }
+  .help {
+    margin-top: 24px;
+    padding: 0 8px;
   }
 }
 
@@ -86,16 +179,16 @@ p {
  */
 @media (orientation: landscape) and (max-height: 540px) {
   body {
-    min-height: 100svh;
     padding: 0;
     justify-content: center;
   }
   h1,
-  body > p {
+  .mobile-hint,
+  .help {
     display: none;
   }
-  canvas {
-    width: min(100vw, 900px, calc(100svh * 9 / 7));
+  .board-frame {
+    width: min(100vw, calc(100svh * 9 / 7));
     border: 0;
     border-radius: 0;
     box-shadow: none;
@@ -122,6 +215,12 @@ html.compact canvas {
   height: 100vh;
   height: 100dvh;
   aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+html.compact .board-frame {
+  width: 100vw;
   border: 0;
   border-radius: 0;
   box-shadow: none;
