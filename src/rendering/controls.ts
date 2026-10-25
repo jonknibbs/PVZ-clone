@@ -312,5 +312,7 @@ export function drawControlPanel(view: RenderContext, panel: ControlPanel) {
   }
   drawPauseButton(view, panel.pause, text);
   drawMenuButton(view, panel.menu, text);
-  drawDebugButton(view, panel.debug, text);
+  if (game.debugAvailable) {
+    drawDebugButton(view, panel.debug, text);
+  }
 }

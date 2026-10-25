@@ -29,7 +29,7 @@ try {
   console.warn('Local storage is unavailable. Preferences will be kept in memory.', error);
   preferenceStore = createMemoryPreferenceStore();
 }
-const game = createGame({ preferenceStore });
+const game = createGame({ preferenceStore, debugAvailable: import.meta.env.DEV });
 const view: RenderContext = { game, ctx };
 const coarsePointer = window.matchMedia('(pointer: coarse)');
 let layout: Layout = DESKTOP_LAYOUT;
@@ -73,9 +73,9 @@ function matchDisplayDensity() {
 function frame(now: number) {
   const deltaSeconds = Math.min(0.05, (now - previousFrame) / 1000);
   previousFrame = now;
-  updateGame(game, deltaSeconds);
   layout = chooseLayout();
   matchDisplayDensity();
+  updateGame(game, deltaSeconds);
   renderGame(view, layout);
   frameRequest = requestAnimationFrame(frame);
 }

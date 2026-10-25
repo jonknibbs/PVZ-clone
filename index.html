@@ -7,19 +7,73 @@
   </head>
   <body>
     <h1>🐜 Ants vs Marbles</h1>
-    <canvas id="c" width="900" height="700"></canvas>
-    <p>
-      Pick a marble, then click or tap a lane to drop it in from that height (higher = harder
-      landing on ants; heavier marbles hit harder). Marbles roll toward the exit and stop at ants;
-      they pass through each other unless one is being chewed, in which case the ones behind queue
-      up.
-      <b>Track pieces</b>: Ramps slide marbles into the next lane, Rings pay out crumbs every time a
-      marble drops through, Springs bounce them back up toward the top for another drop — click a
-      placed spring to cycle its strength (1–4 bars) and set how high it bounces. Ant Eater (E)
-      sweeps the whole maze clean — then rests 90 s. Collect crumbs by clicking or tapping them.
-      Right-click / Esc cancels, G = glove (moves marbles and track pieces).
-    </p>
+    <div class="board-frame">
+      <canvas id="c" width="900" height="700" aria-label="Ants vs Marbles game board"></canvas>
+    </div>
     <p class="mobile-hint">For a more comfortable game view, rotate your phone to landscape.</p>
+    <section class="help" aria-labelledby="how-to-play">
+      <div class="help-column">
+        <h2 id="how-to-play">How to play</h2>
+        <ul class="rules">
+          <li>
+            <strong>Stop the ants.</strong> They climb up from the hills at the bottom. If one
+            reaches the top, you lose.
+          </li>
+          <li>
+            <strong>Drop marbles.</strong> Pick one from the bar, then click a lane. The higher you
+            drop it, the harder it lands, and heavy marbles hit hardest.
+          </li>
+          <li><strong>Collect crumbs.</strong> Click falling crumbs to pay for more marbles.</li>
+          <li>
+            <strong>Marbles queue.</strong> They pass through each other, but line up behind one
+            that an ant is chewing.
+          </li>
+        </ul>
+        <h3>Track pieces</h3>
+        <dl class="pieces">
+          <dt>Ramp</dt>
+          <dd>Slides a marble into the next lane.</dd>
+          <dt>Spring</dt>
+          <dd>Bounces it back up for another drop. Click a placed spring to set its strength.</dd>
+          <dt>Boost</dt>
+          <dd>Speeds it up so it hits harder.</dd>
+          <dt>Ring</dt>
+          <dd>Pays crumbs every time a marble drops through.</dd>
+        </dl>
+      </div>
+      <div class="help-column">
+        <h2>Controls</h2>
+        <table class="keys">
+          <tbody>
+            <tr>
+              <td><kbd>1</kbd> to <kbd>9</kbd>, <kbd>0</kbd> <kbd>-</kbd> <kbd>=</kbd></td>
+              <td>Pick from the bar</td>
+            </tr>
+            <tr>
+              <td>Click a lane</td>
+              <td>Drop the marble or piece</td>
+            </tr>
+            <tr>
+              <td><kbd>G</kbd></td>
+              <td>Glove: pick up and move marbles and pieces</td>
+            </tr>
+            <tr>
+              <td><kbd>E</kbd></td>
+              <td>Ant Eater: clears the maze, then rests 90 s</td>
+            </tr>
+            <tr>
+              <td><kbd>P</kbd></td>
+              <td>Pause</td>
+            </tr>
+            <tr>
+              <td><kbd>Esc</kbd> or right-click</td>
+              <td>Cancel</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">New here? Choose <strong>How to Play</strong> on the main menu.</p>
+      </div>
+    </section>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

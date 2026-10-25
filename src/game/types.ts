@@ -18,7 +18,7 @@ export type AntType =
   | 'mite'
   | 'digger';
 
-export type GameMode = 'free' | 'campaign';
+export type GameMode = 'free' | 'campaign' | 'tutorial';
 
 export type Screen = 'menu' | 'settings' | 'levels' | 'intro' | 'play' | 'win' | 'lose';
 
@@ -272,6 +272,7 @@ export interface GameState {
   screen: Screen;
   paused: boolean;
   confirmQuit: boolean;
+  tutorial: TutorialProgress | null;
   debugUsed: boolean;
   pointer: Point;
   /** Keyboard focus inside a menu, remembered per screen. */
@@ -295,9 +296,17 @@ export interface GameState {
   invasionDuration: number;
 }
 
+export interface TutorialProgress {
+  step: number;
+  /** Seconds spent on the current step, for steps that wait for something to happen. */
+  stepElapsed: number;
+  crumbsAtStepStart: number;
+}
+
 export interface Preferences {
   marbleStyle: MarbleStyle;
   unlockedLevels: number;
+  tutorialDone: boolean;
 }
 
 export interface PreferenceStore {
@@ -310,6 +319,8 @@ export interface Game {
   mode: GameMode;
   levelIndex: number;
   debug: boolean;
+  /** Development builds only: lets F2 switch on debug mode. */
+  debugAvailable: boolean;
   /** Crumb count to put back when debug mode is switched off. */
   debugCrumbsBackup: number | null;
   preferences: Preferences;

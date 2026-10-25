@@ -2,7 +2,11 @@ import { CAMPAIGN_LEVELS } from './definitions';
 import type { Game, MarbleStyle, Preferences, PreferenceStore } from './types';
 
 export function createMemoryPreferenceStore(): PreferenceStore {
-  let preferences: Preferences = { marbleStyle: 'character', unlockedLevels: 1 };
+  let preferences: Preferences = {
+    marbleStyle: 'character',
+    unlockedLevels: 1,
+    tutorialDone: false,
+  };
   return {
     load: () => ({ ...preferences }),
     save: (next) => {
@@ -21,11 +25,13 @@ export function createBrowserPreferenceStore(storage: Storage): PreferenceStore 
         unlockedLevels: Number.isFinite(savedLevels)
           ? Math.max(1, Math.min(CAMPAIGN_LEVELS.length, savedLevels))
           : 1,
+        tutorialDone: storage.getItem('avm_tutorial_done') === '1',
       };
     },
     save(preferences) {
       storage.setItem('avm_marble_style', preferences.marbleStyle);
       storage.setItem('avm_unlocked', String(preferences.unlockedLevels));
+      storage.setItem('avm_tutorial_done', preferences.tutorialDone ? '1' : '0');
     },
   };
 }
@@ -60,5 +66,13 @@ export function unlockLevel(game: Game, levelCount: number) {
     return;
   }
   game.preferences.unlockedLevels = Math.min(levelCount, CAMPAIGN_LEVELS.length);
+  persistPreferences(game);
+}
+
+export function markTutorialDone(game: Game) {
+  if (game.preferences.tutorialDone) {
+    return;
+  }
+  game.preferences.tutorialDone = true;
   persistPreferences(game);
 }

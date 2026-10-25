@@ -48,10 +48,18 @@ test('existing save keys and all three marble styles survive reload', () => {
 test('invalid saved preferences use documented defaults and bounded level progress', () => {
   const storage = new MemoryStorage();
   const store = createBrowserPreferenceStore(storage);
-  assert.deepEqual(store.load(), { marbleStyle: 'character', unlockedLevels: 1 });
+  assert.deepEqual(store.load(), {
+    marbleStyle: 'character',
+    unlockedLevels: 1,
+    tutorialDone: false,
+  });
   storage.setItem('avm_marble_style', 'unknown');
   storage.setItem('avm_unlocked', '999');
-  assert.deepEqual(store.load(), { marbleStyle: 'character', unlockedLevels: 10 });
+  assert.deepEqual(store.load(), {
+    marbleStyle: 'character',
+    unlockedLevels: 10,
+    tutorialDone: false,
+  });
   storage.setItem('avm_unlocked', '-3');
   assert.equal(store.load().unlockedLevels, 1);
 });

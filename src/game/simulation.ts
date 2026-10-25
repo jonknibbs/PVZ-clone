@@ -14,6 +14,7 @@ import {
 import { ITEM_ORDER } from './definitions';
 import { updateMarbles, updateProjectiles } from './marbles';
 import { unlockLevel } from './preferences';
+import { updateTutorial } from './tutorial';
 import type { Game } from './types';
 
 export function updateGame(game: Game, deltaSeconds: number) {
@@ -35,7 +36,11 @@ export function updateGame(game: Game, deltaSeconds: number) {
   updateAnts(game, deltaSeconds);
   removeDefeatedAnts(game);
   updateTransientEffects(game, deltaSeconds);
-  checkVictory(game);
+  if (game.state.tutorial) {
+    updateTutorial(game, deltaSeconds);
+  } else {
+    checkVictory(game);
+  }
 }
 
 function updateFrameTimers(game: Game, deltaSeconds: number) {
@@ -113,7 +118,7 @@ function updateSpawns(game: Game, deltaSeconds: number) {
     game.state.cooldowns[itemType] = Math.max(0, game.state.cooldowns[itemType] - deltaSeconds);
   }
   game.state.nextCrumbIn -= deltaSeconds;
-  if (game.state.nextCrumbIn <= 0) {
+  if (game.state.nextCrumbIn <= 0 && !game.state.tutorial) {
     game.state.nextCrumbIn =
       game.state.crumbInterval + game.random() * game.state.crumbIntervalJitter;
     game.state.crumbDrops.push({
