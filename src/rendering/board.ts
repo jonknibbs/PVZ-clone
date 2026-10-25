@@ -3,6 +3,8 @@ import {
   BOARD_BOTTOM,
   BOARD_X,
   BOARD_Y,
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
   LANE_COUNT,
   LANE_LENGTH,
   LANE_WIDTH,
@@ -14,17 +16,17 @@ import type { RenderContext } from './context';
 import { roundedRect } from './primitives';
 
 export function drawBoard(view: RenderContext) {
-  const { ctx, canvas, game } = view;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const backdrop = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  const { ctx, game } = view;
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  const backdrop = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
   backdrop.addColorStop(0, '#314b3e');
   backdrop.addColorStop(0.55, '#253d32');
   backdrop.addColorStop(1, '#1b3029');
   ctx.fillStyle = backdrop;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   for (let index = 0; index < 18; index++) {
-    const x = (index * 97 + 31) % canvas.width;
-    const y = TOOLBAR_HEIGHT + ((index * 137 + 67) % (canvas.height - TOOLBAR_HEIGHT));
+    const x = (index * 97 + 31) % CANVAS_WIDTH;
+    const y = TOOLBAR_HEIGHT + ((index * 137 + 67) % (CANVAS_HEIGHT - TOOLBAR_HEIGHT));
     ctx.fillStyle = index % 2 ? 'rgba(206,205,134,.08)' : 'rgba(140,190,125,.1)';
     ctx.beginPath();
     ctx.ellipse(x, y, 2 + (index % 3), 7 + (index % 4), index * 0.7, 0, 7);
@@ -111,11 +113,11 @@ export function drawBoard(view: RenderContext) {
   ctx.shadowBlur = 3;
   ctx.fillText('MARBLE DROP ZONE', BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2, BOARD_Y + 3);
   ctx.shadowBlur = 0;
-  const exit = ctx.createLinearGradient(0, BOARD_BOTTOM, 0, BOARD_BOTTOM + 42);
+  const exit = ctx.createLinearGradient(0, BOARD_BOTTOM, 0, BOARD_BOTTOM + 48);
   exit.addColorStop(0, '#324b3b');
   exit.addColorStop(1, '#1e322b');
   ctx.fillStyle = exit;
-  roundedRect(view, BOARD_X - 3, BOARD_BOTTOM - 2, LANE_COUNT * LANE_WIDTH + 6, 39, 8);
+  roundedRect(view, BOARD_X - 3, BOARD_BOTTOM - 2, LANE_COUNT * LANE_WIDTH + 6, 48, 8);
   ctx.fill();
   ctx.strokeStyle = 'rgba(224,204,145,.5)';
   ctx.lineWidth = 1;
@@ -125,7 +127,8 @@ export function drawBoard(view: RenderContext) {
   ctx.stroke();
   ctx.fillStyle = '#edcf89';
   ctx.font = 'bold 12px "Trebuchet MS",sans-serif';
-  ctx.fillText('ANT TRAIL  ·  EXIT', BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2, BOARD_BOTTOM + 25);
+  // Sits below the ant hills, which used to cover it.
+  ctx.fillText('ANT TRAIL  ·  EXIT', BOARD_X + (LANE_COUNT * LANE_WIDTH) / 2, BOARD_BOTTOM + 41);
   for (let lane = 0; lane < LANE_COUNT; lane++) {
     const active = game.state.ants.some(
       (ant) =>

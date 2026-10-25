@@ -15,9 +15,9 @@ A browser tower-defence game in the style of Plants vs Zombies. Ants climb a mar
 - Vertical maze of **5 lanes** (100 px wide, 540 px long). Canvas is 900×700.
 - **Top:** the marble chute (red line). Marbles are dropped in from here.
 - **Bottom:** the exit, where ants enter. Marbles stop at the exit.
-- Top bar: crumb counter, marble selector (11 slots incl. track pieces), eater, glove.
-- Left side: invasion progress bar.
-- On phones, tap the canvas to use controls; landscape orientation gives the clearest view.
+- Top bar: crumb counter, marble selector (12 slots incl. track pieces), eater, glove.
+- Left side: invasion progress bar. Once the schedule is exhausted it reads **ANTS LEFT: n** so the final Queen is accounted for.
+- On phones, tap the canvas to use controls. Landscape phones and tablets get a compact layout with large controls beside or below the board (see §8).
 
 ## 3. Resources — Crumbs
 
@@ -41,8 +41,9 @@ Each marble has a cost, health, cooldown (after placing one, that type is unavai
 
 ### 4.1 Placing and rolling
 
-- Select a marble (click slot or press 1–6), then click a lane. The marble is dropped from the **clicked height** (clamped to between the chute and just above the exit).
-- It cannot be placed if unaffordable or on cooldown. Marbles do not collide with each other and can overlap freely.
+- Select a marble (click slot or press 1–7), then click a lane. The marble is dropped from the **clicked height** (clamped to between the chute and just above the exit).
+- It cannot be placed if unaffordable or on cooldown; either way the game says why.
+- Marbles do not collide with each other and can overlap freely.
 - Marbles accelerate while falling (500 px/s², max 420 px/s, starting 75 px/s) toward the exit.
 - A marble stops when it reaches the exit or touches an ant. Marbles pass through each other, **except** that they queue up (about 54 px apart) behind a marble that is stopped by an ant being chewed, until that marble dies or the ant is killed.
 - Marbles are destroyed when HP reaches 0.
@@ -61,14 +62,15 @@ Toggle with the glove button or **G**. Click a marble or track piece to pick it 
 
 ## 4a. Track pieces
 
-Placed in a lane at the clicked height (same selector bar, keys 8, 9, 0 and -). Ants ignore them. Pieces trigger every time a marble passes over them while moving downward, so marbles can loop through a route indefinitely (e.g. ramp right → ramp left → spring). A piece re-arms for a marble once it has moved away from it.
+Placed in a lane at the clicked height (same selector bar, keys 8, 9, 0, - and =). Ants ignore them. Pieces trigger every time a marble passes over them while moving downward, so marbles can loop through a route indefinitely (e.g. ramp right → ramp left → spring). A piece re-arms for a marble once it has moved away from it.
 
-| Piece  | Key | Cost | Cooldown | Effect                                                                                                                                                             |
-| ------ | --- | ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Spring | 8   | 75   | 2 s      | Launches a marble back up to the top of the maze; it then falls again and gets a fresh drop for impact damage                                                      |
-| Ramp ◀ | 9   | 25   | 1 s      | Slides a marble into the lane to the left (not placeable in the leftmost lane)                                                                                     |
-| Ramp ▶ | 0   | 25   | 1 s      | Slides a marble into the lane to the right (not placeable in the rightmost lane)                                                                                   |
-| Boost  | -   | 60   | 2 s      | Accelerates a marble to 720 px/s (normal max 420) until it stops. A boosted marble that hits an ant gets +250 px of effective fall distance and ×1.5 impact damage |
+| Piece  | Key | Cost | Cooldown | Effect                                                                                                                                                                                                                       |
+| ------ | --- | ---- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spring | 8   | 75   | 2 s      | Launches a marble back up to the top of the maze; it then falls again and gets a fresh drop for impact damage. With no tool selected, click a placed spring to cycle its strength (1–4 bars), which sets how high it bounces |
+| Ramp ◀ | 9   | 25   | 1 s      | Slides a marble into the lane to the left (not placeable in the leftmost lane)                                                                                                                                               |
+| Ramp ▶ | 0   | 25   | 1 s      | Slides a marble into the lane to the right (not placeable in the rightmost lane)                                                                                                                                             |
+| Boost  | -   | 60   | 2 s      | Accelerates a marble to 720 px/s (normal max 420) until it stops. A boosted marble that hits an ant gets +250 px of effective fall distance and ×1.5 impact damage                                                           |
+| Ring   | =   | 100  | 2 s      | Pays out 2 crumbs every time a marble drops through it                                                                                                                                                                       |
 
 Pieces can be chained to build routes and loops (e.g. ramp across, spring back up). Pieces can't be placed within 44 px of another piece in the same lane.
 
@@ -111,24 +113,44 @@ Defeated ants and marbles play a short fade/impact animation before being remove
 
 The main menu offers **Campaign** and **Free Play** (the full-length game above, everything unlocked).
 
-Campaign is 10 short levels (~1 minute each). Each level starts with an intro screen listing what is new; marbles, ants, the glove (level 1) and the Ant Eater (level 3) are introduced gradually, and the bar only shows what has been unlocked so far. Level 1 has only the Shooter marble and basic ants; level 10 ends with the Queen. Campaign ants walk 25% faster, start with reduced health that scales up per level, and crumbs fall faster than in free play. Winning unlocks the next level (progress saved in localStorage); a **Main menu** button is available during play.
+Campaign is 10 short levels (~1 minute each). Each level starts with an intro screen listing what is new; marbles, ants, the glove (level 1) and the Ant Eater (level 3) are introduced gradually, and the bar only shows what has been unlocked so far. Level 1 has only the Shooter marble and basic ants; level 10 ends with the Queen. Campaign ants walk 25% faster, start with reduced health that scales up per level, and crumbs fall faster than in free play. Winning unlocks the next level (progress saved in localStorage); a **Main menu** button is available during play, which asks for confirmation first. The mite, digger and giant Queen appear in free play only.
 
 ## 7. Controls
 
-| Input                           | Action                                  |
-| ------------------------------- | --------------------------------------- |
-| Click bar slot / keys 1–9, 0, - | Select marble or track piece            |
-| E / Ant Eater button            | Call the Ant Eater                      |
-| Click lane                      | Drop selected marble                    |
-| Click crumb                     | Collect                                 |
-| G                               | Toggle glove                            |
-| Right-click / Esc               | Cancel selection                        |
-| P / Pause button (left panel)   | Pause / resume (freezes the whole game) |
-| Click on menu/win/lose screen   | Start / restart                         |
+| Input                              | Action                                                       |
+| ---------------------------------- | ------------------------------------------------------------ |
+| Click bar slot / keys 1–9, 0, -, = | Select marble or track piece                                 |
+| E / Ant Eater button               | Call the Ant Eater                                           |
+| Click lane                         | Drop selected marble                                         |
+| Click lane with no tool selected   | Cycle the strength of a spring already there                 |
+| Click crumb                        | Collect                                                      |
+| G                                  | Toggle glove                                                 |
+| Right-click / Esc                  | Cancel selection                                             |
+| P / Pause button (left panel)      | Pause / resume (freezes the whole game)                      |
+| Main menu button (left panel)      | Ask to leave the run; Enter confirms, Esc keeps playing      |
+| F2 / Debug button                  | Debug mode: infinite crumbs, no cooldowns, ant spawn buttons |
+| Click on menu/win/lose screen      | Start / restart                                              |
+| Arrow keys / Enter on a menu       | Move between menu buttons and press the focused one          |
 
-## 8. Possible future work
+Modifier keys are ignored, so browser shortcuts such as Cmd+1 or Ctrl+- are not read as game input. Hiding the tab or switching window pauses the game. A debug-mode win does not unlock the next campaign level, and leaving debug mode puts the real crumb count back.
 
-- Multiple levels with hand-designed waves and difficulty settings
+## 8. Platform and display
+
+- The canvas bitmap is scaled to `devicePixelRatio`, so the game is sharp on high-density screens. Game drawing uses logical 900×700 world coordinates.
+- Touch is supported: tapping moves the placement preview as well as acting on the tap.
+- **Desktop and laptop** keep the fixed 900×700 page: toolbar across the top, HUD to the left of the board.
+- **Landscape phones** (viewport height ≤ 540 px) and **tablets** (coarse pointer, shorter side 600–1024 px) get the compact layout. The canvas fills the viewport, the board is drawn through a scaled viewport, and the controls move into a panel with tap targets of at least 44 px:
+  - Landscape: utilities (crumbs, invasion, Ant Eater, glove, pause, main menu, debug) on the left, the board in the middle, a 3×4 item grid on the right.
+  - Portrait tablets: the board on top, then the invasion bar, a row of utilities and a 6×2 item grid.
+  - Menus are scaled to fit their panel region rather than the whole 900×700 world.
+- Portrait phones keep the desktop page with a hint to rotate to landscape.
+- Marble style and campaign progress are saved in `localStorage`; if storage is unavailable the game says so and keeps them for the session only.
+
+## 9. Possible future work
+
 - More marble types (e.g. magnet, bouncing, splash)
-- Sound and music, high scores, save progress
-- Mobile / touch support
+- Sound and music, high scores
+- Campaign levels for the mite, digger and giant Queen, which are free-play only today
+- A portrait phone layout; the compact layout could serve it, but the board would be very small
+- Larger menu buttons on landscape phones, where the menu panel is height-limited
+- Screen-reader support, which the canvas-only UI cannot offer

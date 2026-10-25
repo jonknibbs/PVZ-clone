@@ -10,6 +10,8 @@ import baseline from './fixtures/gameplay-baseline.json';
 import { seededRandom, snapshot, testGame } from './helpers';
 
 // Golden states were captured from the original game at commit ec90369, not the refactored engine.
+// Exception: the Twin's follow-up shot now runs on game time rather than a real timer, so it lands
+// inside these synchronous frames. The original fired it too, just asynchronously after the capture.
 for (const type of ANT_TYPES) {
   test(`${type} emergence and movement match the original game`, () => {
     const game = testGame();

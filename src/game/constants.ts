@@ -31,4 +31,5 @@ export const ANTEATER_SPEED = 230;
 export const CANVAS_WIDTH = 900;
 export const CANVAS_HEIGHT = 700;
 export const RING_REWARD = 2;
+export const TWIN_SHOT_DELAY = 0.16;
 export const laneCenterX = (lane: number) => BOARD_X + lane * LANE_WIDTH + LANE_WIDTH / 2;

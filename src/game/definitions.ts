@@ -81,7 +81,7 @@ export const ITEM_DEFINITIONS: ItemCatalog = {
     description: 'Track: bounces marbles back to the top',
   },
   rampL: {
-    name: 'Ramp',
+    name: 'Ramp ◀',
     cost: 25,
     kind: 'piece',
     cooldown: 1,
@@ -89,7 +89,7 @@ export const ITEM_DEFINITIONS: ItemCatalog = {
     description: 'Track: slides marbles one lane left',
   },
   rampR: {
-    name: 'Ramp',
+    name: 'Ramp ▶',
     cost: 25,
     kind: 'piece',
     cooldown: 1,

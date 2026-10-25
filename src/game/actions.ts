@@ -7,37 +7,74 @@ import {
   MIN_DROP_Y,
 } from './constants';
 import { ITEM_DEFINITIONS, isTrackType } from './definitions';
-import type { Game, HeldItem, ItemType } from './types';
+import type { Game, HeldItem, ItemType, NotificationTone } from './types';
+
+/** Keeps a drop inside the playable part of a lane. */
+export function clampDropY(y: number) {
+  return Math.max(MIN_DROP_Y, Math.min(BOARD_BOTTOM - 60, y));
+}
+
+/**
+ * Shared affordability check for buying a new item. Always explains itself, so a
+ * click that cannot do anything never passes silently.
+ */
+function canAfford(game: Game, type: ItemType) {
+  if (game.debug) {
+    return true;
+  }
+  const definition = ITEM_DEFINITIONS[type];
+  const cooldown = game.state.cooldowns[type];
+  if (cooldown > 0) {
+    showNotification(game, `${definition.name} is recharging: ${Math.ceil(cooldown)}s`);
+    return false;
+  }
+  if (game.state.crumbs < definition.cost) {
+    const short = Math.ceil(definition.cost - game.state.crumbs);
+    showNotification(game, `${definition.name} costs ${definition.cost} — ${short} more crumbs.`);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Shared lane and overlap rules for both buying an item and putting down a
+ * carried one. `y` must already be clamped with `clampDropY`.
+ */
+export function validatePlacement(game: Game, type: ItemType, lane: number, y: number) {
+  if (!isTrackType(type)) {
+    return true;
+  }
+  const definition = ITEM_DEFINITIONS[type];
+  if (
+    definition.direction &&
+    (lane + definition.direction < 0 || lane + definition.direction >= LANE_COUNT)
+  ) {
+    showNotification(game, 'No lane that way!');
+    return false;
+  }
+  if (game.state.trackPieces.some((piece) => piece.lane === lane && Math.abs(piece.y - y) < 44)) {
+    showNotification(game, 'Track piece already there!');
+    return false;
+  }
+  return true;
+}
 
 export function placeItem(game: Game, type: ItemType, lane: number, y: number) {
   const definition = ITEM_DEFINITIONS[type];
-  if (!game.debug && (game.state.crumbs < definition.cost || game.state.cooldowns[type] > 0)) {
+  if (!canAfford(game, type)) {
     return false;
   }
-  y = Math.max(MIN_DROP_Y, Math.min(BOARD_BOTTOM - 60, y));
+  y = clampDropY(y);
+  if (!validatePlacement(game, type, lane, y)) {
+    return false;
+  }
+  game.state.crumbs -= definition.cost;
+  game.state.cooldowns[type] = definition.cooldown;
   if (isTrackType(type)) {
-    const definition = ITEM_DEFINITIONS[type];
-    if (
-      definition.direction &&
-      (lane + definition.direction < 0 || lane + definition.direction >= LANE_COUNT)
-    ) {
-      showNotification(game, 'No lane that way!');
-      return false;
-    }
-    if (
-      game.state.trackPieces.some((marble) => marble.lane === lane && Math.abs(marble.y - y) < 44)
-    ) {
-      showNotification(game, 'Track piece already there!');
-      return false;
-    }
-    game.state.crumbs -= definition.cost;
-    game.state.cooldowns[type] = definition.cooldown;
     game.state.trackPieces.push({ type: type, lane: lane, y: y, pulseRemaining: 0, strength: 4 });
     return true;
   }
   const marbleDefinition = ITEM_DEFINITIONS[type];
-  game.state.crumbs -= definition.cost;
-  game.state.cooldowns[type] = definition.cooldown;
   game.state.marbles.push({
     type: type,
     lane: lane,
@@ -72,16 +109,27 @@ export function callAnteater(game: Game) {
   game.state.anteaterCooldown = ANTEATER_COOLDOWN;
 }
 
-export function showNotification(game: Game, time: string) {
-  game.state.notification = { text: time, lifeRemaining: 1.5 };
+export function showNotification(game: Game, text: string, tone: NotificationTone = 'error') {
+  // Errors linger a little longer than neutral status messages.
+  game.state.notification = { text, lifeRemaining: tone === 'error' ? 2.4 : 1.5, tone };
 }
 
 export function toggleDebug(game: Game) {
   game.debug = !game.debug;
   if (game.debug) {
+    // Remember the real crumb count so switching debug off does not hand out 9,999 crumbs.
+    game.debugCrumbsBackup = game.state.crumbs;
     game.state.crumbs = 9999;
+    game.state.debugUsed = true;
+  } else {
+    game.state.crumbs = game.debugCrumbsBackup ?? game.state.crumbs;
+    game.debugCrumbsBackup = null;
   }
-  showNotification(game, 'Debug mode ' + (game.debug ? 'ON: infinite crumbs' : 'OFF'));
+  showNotification(
+    game,
+    'Debug mode ' + (game.debug ? 'ON: infinite crumbs' : 'OFF'),
+    game.debug ? 'error' : 'info',
+  );
 }
 
 export function togglePause(game: Game) {
@@ -147,20 +195,12 @@ export function dropHeldItem(game: Game, lane: number, y: number) {
     showNotification(game, 'Pick up an item before putting it down.');
     return;
   }
-  y = Math.max(MIN_DROP_Y, Math.min(BOARD_BOTTOM - 60, y));
+  y = clampDropY(y);
+  if (!validatePlacement(game, heldItem.entity.type, lane, y)) {
+    return;
+  }
   if (heldItem.isPiece) {
     const entity = heldItem.entity;
-    const direction = ITEM_DEFINITIONS[entity.type].direction;
-    if (direction && (lane + direction < 0 || lane + direction >= LANE_COUNT)) {
-      showNotification(game, 'No lane that way!');
-      return;
-    }
-    if (
-      game.state.trackPieces.some((marble) => marble.lane === lane && Math.abs(marble.y - y) < 44)
-    ) {
-      showNotification(game, 'Track piece already there!');
-      return;
-    }
     entity.lane = lane;
     entity.y = y;
     game.state.trackPieces.push(entity);

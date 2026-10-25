@@ -20,6 +20,7 @@ import {
   MAX_FALL_SPEED,
   MIN_DROP_Y,
   RING_REWARD,
+  TWIN_SHOT_DELAY,
   laneCenterX,
 } from './constants';
 import { ITEM_DEFINITIONS } from './definitions';
@@ -201,6 +202,13 @@ function updateTrackInteraction(game: Game, marble: Marble, blocked: boolean) {
 }
 
 function updateMarbleAbility(game: Game, marble: Marble, deltaSeconds: number) {
+  if (marble.twinShotRemaining) {
+    // Counted down with game time, so a paused game never fires the follow-up shot.
+    marble.twinShotRemaining = Math.max(0, marble.twinShotRemaining - deltaSeconds);
+    if (marble.twinShotRemaining === 0) {
+      fireProjectile(game, marble, false);
+    }
+  }
   const antBelow = game.state.ants.some(
     (ant) =>
       ant.health > 0 &&
@@ -226,11 +234,7 @@ function updateMarbleAbility(game: Game, marble: Marble, deltaSeconds: number) {
   if (marble.type === 'twin' && antBelow && marble.elapsed >= 1.4) {
     marble.elapsed = 0;
     fireProjectile(game, marble, false);
-    game.schedule(() => {
-      if (game.state.marbles.includes(marble) && game.state.screen === 'play') {
-        fireProjectile(game, marble, false);
-      }
-    }, 160);
+    marble.twinShotRemaining = TWIN_SHOT_DELAY;
   }
   if (marble.type === 'bomb' && marble.touchingAnt) {
     marble.fuseRemaining -= deltaSeconds;

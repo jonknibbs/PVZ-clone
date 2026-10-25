@@ -1,187 +1,50 @@
-import { ANTEATER_COOLDOWN, GLOVE_COOLDOWN, TOOLBAR_HEIGHT } from '../game/constants';
-import {
-  ANT_DEFINITIONS,
-  CAMPAIGN_LEVELS,
-  isTrackType,
-  ITEM_DEFINITIONS,
-} from '../game/definitions';
-import { containsPoint, TOOL_BUTTONS, toolbarSlot } from '../ui/layout';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, TOOLBAR_HEIGHT } from '../game/constants';
+import { ANT_DEFINITIONS, CAMPAIGN_LEVELS } from '../game/definitions';
+import { focusedMenuIndex } from '../ui/input';
+import { containsPoint, CRUMB_BANK, TOOL_BUTTONS, toolbarSlot } from '../ui/layout';
 import { getIntroductionRows, getMenuButtons } from '../ui/menus';
 import { drawAnt, drawAnteater } from './ants';
 import type { RenderContext } from './context';
+import { drawCrumbBank, drawEaterButton, drawGloveButton, drawItemSlot } from './controls';
 import { drawMarble } from './marbles';
 import { roundedRect } from './primitives';
-import { drawItemPreview, drawTrackPiece } from './track';
+import { drawItemPreview } from './track';
 
 export function drawToolbar(view: RenderContext) {
-  const { ctx, canvas, game } = view;
+  const { ctx, game } = view;
   const bar = ctx.createLinearGradient(0, 0, 0, TOOLBAR_HEIGHT);
   bar.addColorStop(0, '#263c32');
   bar.addColorStop(1, '#192e28');
   ctx.fillStyle = bar;
-  ctx.fillRect(0, 0, canvas.width, TOOLBAR_HEIGHT);
+  ctx.fillRect(0, 0, CANVAS_WIDTH, TOOLBAR_HEIGHT);
   ctx.fillStyle = 'rgba(240,218,158,.18)';
-  ctx.fillRect(0, TOOLBAR_HEIGHT - 2, canvas.width, 2);
+  ctx.fillRect(0, TOOLBAR_HEIGHT - 2, CANVAS_WIDTH, 2);
   ctx.fillStyle = '#e8d09a';
   ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('ANTS  /  MARBLES', 16, 16);
-  const bank = ctx.createLinearGradient(10, 10, 96, 90);
-  bank.addColorStop(0, '#e7ca7a');
-  bank.addColorStop(0.55, '#ba9657');
-  bank.addColorStop(1, '#76583d');
-  ctx.fillStyle = bank;
-  roundedRect(view, 10, 19, 86, 73, 12);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,243,198,.52)';
-  ctx.lineWidth = 1;
-  roundedRect(view, 10.5, 19.5, 85, 72, 12);
-  ctx.stroke();
-  ctx.fillStyle = '#39452f';
-  ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('CRUMBS', 53, 36);
-  ctx.fillStyle = '#fff4d0';
-  ctx.font = 'bold 26px Georgia,serif';
-  ctx.fillText(game.debug ? '∞' : String(Math.floor(game.state.crumbs)), 53, 68);
-  if (game.debug) {
-    ctx.fillStyle = '#fff2c4';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.fillText('DEBUG (F2)', 53, 84);
-  }
+  drawCrumbBank(view, CRUMB_BANK);
   game.state.availableItems.forEach((type, index) => {
     const slot = toolbarSlot(index);
-    const definition = ITEM_DEFINITIONS[type];
-    const affordable = game.state.crumbs >= definition.cost;
-    const cooldown = game.state.cooldowns[type];
-    const card = ctx.createLinearGradient(slot.x, slot.y, slot.x, slot.y + slot.height);
-    card.addColorStop(0, game.state.selectedItem === type ? '#526b4b' : '#344d3d');
-    card.addColorStop(1, '#20382f');
-    ctx.fillStyle = card;
-    roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
-    ctx.fill();
-    ctx.strokeStyle = game.state.selectedItem === type ? '#f3d98c' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = game.state.selectedItem === type ? 2 : 1;
-    roundedRect(view, slot.x + 0.5, slot.y + 0.5, slot.width - 1, slot.height - 1, 8);
-    ctx.stroke();
-    if (isTrackType(type)) {
-      drawTrackPiece(view, type, slot.x + slot.width / 2, slot.y + 34, affordable ? 1 : 0.4);
-    } else {
-      drawMarble(
-        view,
-        { type: type, elapsed: 0, health: 1, maxHealth: 1, touchingAnt: false },
-        slot.x + slot.width / 2,
-        slot.y + 34,
-        affordable ? 1 : 0.4,
-      );
-    }
-    ctx.fillStyle = '#f6f0db';
-    ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(definition.name, slot.x + slot.width / 2, slot.y + 64);
-    ctx.fillStyle = affordable ? '#f1d58e' : '#d28b79';
-    ctx.font = 'bold 12px "Trebuchet MS",sans-serif';
-    ctx.fillText(String(definition.cost), slot.x + slot.width / 2, slot.y + 81);
-    if (cooldown > 0) {
-      ctx.fillStyle = 'rgba(8,19,16,.72)';
-      ctx.save();
-      roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
-      ctx.clip();
-      ctx.fillRect(slot.x, slot.y, slot.width, (slot.height * cooldown) / definition.cooldown);
-      ctx.restore();
-    }
-    ctx.fillStyle = 'rgba(246,240,219,.65)';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.fillText(
-      index < 9 ? String(index + 1) : index === 9 ? '0' : index === 10 ? '-' : '=',
-      slot.x + 8,
-      slot.y + 10,
-    );
+    drawItemSlot(view, type, index, slot, { hot: containsPoint(game.state.pointer, slot) });
   });
-  // ant eater special weapon and tools
   if (game.state.abilities.eater) {
-    const eaterX = TOOL_BUTTONS.eater.x;
-    const ready = game.state.anteaterCooldown <= 0 && !game.state.anteater;
-    ctx.fillStyle = ready ? '#6c7750' : '#314b3a';
-    roundedRect(view, eaterX, 8, TOOL_BUTTONS.eater.width, 88, 9);
-    ctx.fill();
-    ctx.strokeStyle = ready ? '#e6d18e' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = ready ? 2 : 1;
-    roundedRect(view, eaterX + 0.5, 8.5, TOOL_BUTTONS.eater.width - 1, 87, 9);
-    ctx.stroke();
-    drawAnteater(view, eaterX + TOOL_BUTTONS.eater.width / 2, 52, 0.45, ready ? 1 : 0.4);
-    ctx.fillStyle = '#f4eed7';
-    ctx.font = 'bold 9px "Trebuchet MS",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      ready
-        ? 'EATER (E)'
-        : game.state.anteater
-          ? 'EATING...'
-          : Math.ceil(game.state.anteaterCooldown) + 's',
-      eaterX + TOOL_BUTTONS.eater.width / 2,
-      88,
-    );
-    if (!ready && !game.state.anteater) {
-      ctx.fillStyle = 'rgba(0,0,0,.42)';
-      ctx.save();
-      roundedRect(view, eaterX + 2, 10, TOOL_BUTTONS.eater.width - 4, 84, 7);
-      ctx.clip();
-      ctx.fillRect(
-        eaterX + 2,
-        10,
-        TOOL_BUTTONS.eater.width - 4,
-        (84 * game.state.anteaterCooldown) / ANTEATER_COOLDOWN,
-      );
-      ctx.restore();
-    }
+    drawEaterButton(view, TOOL_BUTTONS.eater);
   }
   if (game.state.abilities.glove) {
-    const button = TOOL_BUTTONS.glove;
-    const on = game.state.gloveActive;
-    ctx.fillStyle = on ? '#677b50' : '#314b3a';
-    roundedRect(view, button.x, 8, button.width, 88, 9);
-    ctx.fill();
-    ctx.strokeStyle = on ? '#f1d58e' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = on ? 2 : 1;
-    roundedRect(view, button.x + 0.5, 8.5, button.width - 1, 87, 9);
-    ctx.stroke();
-    ctx.font = '32px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🧤', button.x + button.width / 2, 56);
-    ctx.fillStyle = '#f4eed7';
-    ctx.font = 'bold 10px "Trebuchet MS",sans-serif';
-    const gloveResting = game.state.gloveCooldown > 0 && !game.state.gloveActive;
-    ctx.fillText(
-      gloveResting ? Math.ceil(game.state.gloveCooldown) + 's' : 'Glove (G)',
-      button.x + button.width / 2,
-      84,
-    );
-    if (gloveResting) {
-      ctx.fillStyle = 'rgba(0,0,0,.42)';
-      ctx.save();
-      roundedRect(view, button.x + 2, 10, button.width - 4, 84, 7);
-      ctx.clip();
-      ctx.fillRect(
-        button.x + 2,
-        10,
-        button.width - 4,
-        (84 * game.state.gloveCooldown) / GLOVE_COOLDOWN,
-      );
-      ctx.restore();
-    }
+    drawGloveButton(view, TOOL_BUTTONS.glove);
   }
 }
 
 export function drawMenuOverlay(view: RenderContext) {
-  const { ctx, canvas, game } = view;
+  const { ctx, game } = view;
   const screen = game.state.screen;
-  const centerX = canvas.width / 2;
+  const centerX = CANVAS_WIDTH / 2;
   ctx.fillStyle =
     screen === 'menu' || screen === 'levels' || screen === 'intro'
       ? 'rgba(16,35,28,.91)'
       : 'rgba(12,25,21,.78)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   const panel = ctx.createLinearGradient(200, 110, 700, 590);
   panel.addColorStop(0, 'rgba(63,86,60,.96)');
   panel.addColorStop(1, 'rgba(34,59,48,.97)');
@@ -288,11 +151,17 @@ export function drawMenuOverlay(view: RenderContext) {
             ? ['Level ' + (game.levelIndex + 1) + ' complete!']
             : ['You defended the maze!'];
     ctx.font = 'bold 42px "Trebuchet MS",sans-serif';
-    ctx.fillText(messages[0], centerX, canvas.height / 2 - 20);
+    ctx.fillText(messages[0], centerX, CANVAS_HEIGHT / 2 - 20);
   }
   ctx.shadowBlur = 0;
+  const focusedIndex = focusedMenuIndex(game);
+  let unlockedIndex = -1;
   for (const button of getMenuButtons(game)) {
-    const hot = !button.locked && containsPoint(game.state.pointer, button);
+    if (!button.locked) {
+      unlockedIndex++;
+    }
+    const focused = !button.locked && unlockedIndex === focusedIndex;
+    const hot = !button.locked && (focused || containsPoint(game.state.pointer, button));
     const background = ctx.createLinearGradient(0, button.y, 0, button.y + button.height);
     background.addColorStop(0, button.locked ? '#394438' : hot ? '#e8cd80' : '#bf985c');
     background.addColorStop(1, button.locked ? '#25352d' : hot ? '#ad824f' : '#77583d');
@@ -325,6 +194,14 @@ export function drawMenuOverlay(view: RenderContext) {
       ctx.fillStyle = '#fff4d8';
       ctx.font = 'bold 18px "Trebuchet MS",sans-serif';
       ctx.fillText(button.label, button.x + button.width / 2, button.y + 29);
+    }
+    if (focused) {
+      ctx.strokeStyle = '#fff6cf';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      roundedRect(view, button.x - 4, button.y - 4, button.width + 8, button.height + 8, 12);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 }

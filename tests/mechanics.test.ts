@@ -15,13 +15,14 @@ import {
   QUEEN_ANTEATER_DAMAGE,
   QUEEN_BOMB_DAMAGE,
   RING_REWARD,
+  TWIN_SHOT_DELAY,
   laneCenterX,
 } from '../src/game/constants';
-import { createGame, resetGame, startGame } from '../src/game/game';
+import { startGame } from '../src/game/game';
 import { updateMarbles, updateProjectiles } from '../src/game/marbles';
 import { updateGame } from '../src/game/simulation';
 import type { AntType, Game, MarbleType, TrackType } from '../src/game/types';
-import { seededRandom, testGame } from './helpers';
+import { testGame } from './helpers';
 
 function addMarble(game: Game, type: MarbleType = 'steel', lane = 0, y = 300) {
   game.state.crumbs = 9999;
@@ -264,24 +265,37 @@ test('victory unlocks the next campaign level; a breach loses the game', () => {
   assert.equal(game.state.screen, 'lose');
 });
 
-test('twin follow-up shots use the injected scheduler and ignore removed marbles', () => {
-  const callbacks: Array<() => void> = [];
-  const game = createGame({
-    random: seededRandom(),
-    schedule: (callback, delay) => {
-      assert.equal(delay, 160);
-      callbacks.push(callback);
-    },
-  });
-  startGame(game, 'free', 0);
+test('twin follow-up shots run on game time and stop while paused', () => {
+  const game = testGame();
   const twin = addMarble(game, 'twin');
   addWalkingAnt(game, 'basic', 0, 500);
   twin.elapsed = 1.4;
   updateMarbles(game, 0.01);
   assert.equal(game.state.projectiles.length, 1);
-  callbacks[0]();
+  assert.equal(twin.twinShotRemaining, TWIN_SHOT_DELAY);
+
+  // A paused game runs no marble updates, so the delayed shot waits.
+  togglePause(game);
+  updateGame(game, TWIN_SHOT_DELAY);
+  assert.equal(game.state.projectiles.length, 1);
+  assert.equal(twin.twinShotRemaining, TWIN_SHOT_DELAY);
+
+  togglePause(game);
+  updateGame(game, TWIN_SHOT_DELAY);
   assert.equal(game.state.projectiles.length, 2);
-  resetGame(game);
-  callbacks[0]();
-  assert.equal(game.state.projectiles.length, 0);
+  assert.equal(twin.twinShotRemaining, 0);
+});
+
+test('a destroyed twin never fires its follow-up shot', () => {
+  const game = testGame();
+  const twin = addMarble(game, 'twin');
+  addWalkingAnt(game, 'basic', 0, 500);
+  twin.elapsed = 1.4;
+  updateMarbles(game, 0.01);
+  assert.equal(game.state.projectiles.length, 1);
+  twin.health = 0;
+  updateMarbles(game, 0.001);
+  assert.equal(game.state.marbles.length, 0);
+  updateMarbles(game, TWIN_SHOT_DELAY);
+  assert.equal(game.state.projectiles.length, 1);
 });

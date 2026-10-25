@@ -1,0 +1,78 @@
+name: Deploy game
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "Repository secret $name is not set" >&2
+              exit 1
+            fi
+          done
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          # Strip carriage returns: the secrets are maintained from Windows and
+          # an SSH key or known_hosts entry containing CRs is rejected.
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # Assets go first so the new entry point never references files that have
+      # not arrived yet. Previous hashed assets are left in place for pages that
+      # are already open.
+      - name: Upload assets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          target="${DEPLOY_PATH%/}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '$target/assets' && chmod 755 '$target/assets'"
+          rsync -rlvz --chmod=D755,F644 \
+            -e 'ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' \
+            dist/assets/ "$DEPLOY_USER@$DEPLOY_HOST:$target/assets/"
+
+      - name: Upload index.html
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          target="${DEPLOY_PATH%/}"
+          rsync -vz --chmod=F644 \
+            -e 'ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes' \
+            dist/index.html "$DEPLOY_USER@$DEPLOY_HOST:$target/index.html"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

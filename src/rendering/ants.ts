@@ -1,4 +1,4 @@
-import { ANT_HILL_Y, TOOLBAR_HEIGHT } from '../game/constants';
+import { ANT_HILL_Y, CANVAS_WIDTH, TOOLBAR_HEIGHT } from '../game/constants';
 import { ANT_DEFINITIONS } from '../game/definitions';
 import type { AntAppearance, RenderContext } from './context';
 import { roundedRect } from './primitives';
@@ -152,7 +152,7 @@ export function drawQueen(view: RenderContext, ant: AntAppearance) {
 }
 
 export function drawAnt(view: RenderContext, ant: AntAppearance) {
-  const { ctx, canvas } = view;
+  const { ctx } = view;
   if (ant.emergence) {
     if (ant.emergence.elapsed <= 0) {
       return;
@@ -160,7 +160,7 @@ export function drawAnt(view: RenderContext, ant: AntAppearance) {
     ctx.save();
     // Soil hides the underground body while the head crawls out first.
     ctx.beginPath();
-    ctx.rect(0, 0, canvas.width, ANT_HILL_Y);
+    ctx.rect(0, 0, CANVAS_WIDTH, ANT_HILL_Y);
     ctx.clip();
     if (ant.spansAllLanes) {
       drawQueen(view, ant);

@@ -45,6 +45,7 @@ function persistPreferences(game: Game) {
     game.state.notification = {
       text: 'Progress could not be saved on this device.',
       lifeRemaining: 4,
+      tone: 'error',
     };
   }
 }

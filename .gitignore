@@ -3,6 +3,7 @@ dist/
 .vite/
 coverage/
 *.local
+.vite/
 
 # Private, host-specific deployment instructions
 DEPLOYMENT.md
