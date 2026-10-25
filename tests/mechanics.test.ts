@@ -299,3 +299,16 @@ test('a destroyed twin never fires its follow-up shot', () => {
   updateMarbles(game, TWIN_SHOT_DELAY);
   assert.equal(game.state.projectiles.length, 1);
 });
+
+test('sandbox mode has infinite crumbs, no waves, and cannot be lost or won', () => {
+  const game = testGame();
+  startGame(game, 'sandbox', 0);
+  assert.equal(game.state.screen, 'play');
+  assert.equal(game.debug, true);
+  assert.equal(game.state.spawnQueue.length, 0);
+  updateGame(game, 0.1);
+  assert.equal(game.state.crumbs, 9999);
+  assert.equal(game.state.screen, 'play');
+  startGame(game, 'free', 0);
+  assert.equal(game.debug, false);
+});

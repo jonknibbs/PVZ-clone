@@ -47,12 +47,13 @@ export function getMenuButtons(game: Game): MenuButton[] {
   switch (game.state.screen) {
     case 'menu':
       return [
-        button('Campaign', 330, () => {
+        button('Campaign', 290, () => {
           game.state.screen = 'levels';
         }),
-        button('Free Play', 392, () => startGame(game, 'free', 0)),
-        button('How to Play', 454, () => startGame(game, 'tutorial', 0)),
-        button('Settings', 516, () => {
+        button('Free Play', 346, () => startGame(game, 'free', 0)),
+        button('Sandbox', 402, () => startGame(game, 'sandbox', 0)),
+        button('How to Play', 458, () => startGame(game, 'tutorial', 0)),
+        button('Settings', 514, () => {
           game.state.screen = 'settings';
         }),
       ];

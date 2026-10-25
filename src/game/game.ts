@@ -83,6 +83,11 @@ export function resetGame(game: Game) {
 }
 
 export function startGame(game: Game, mode: GameMode, levelIndex: number) {
+  if (mode === 'sandbox') {
+    game.debug = true;
+  } else if (game.mode === 'sandbox') {
+    game.debug = false;
+  }
   game.mode = mode;
   game.levelIndex = levelIndex;
   resetGame(game);
@@ -108,6 +113,11 @@ export function startGame(game: Game, mode: GameMode, levelIndex: number) {
     game.state.spawnQueue = [];
     game.state.screen = 'play';
     beginTutorial(game);
+  } else if (mode === 'sandbox') {
+    // no scheduled waves: ants only arrive from the spawn buttons
+    game.state.spawnQueue = [];
+    game.state.invasionDuration = 1;
+    game.state.screen = 'play';
   } else {
     game.state.screen = 'play';
   }

@@ -52,7 +52,11 @@ export function updateAnts(game: Game, deltaSeconds: number) {
       }
     }
     if (ant.y < BOARD_Y - 5) {
-      game.state.screen = 'lose';
+      if (game.mode === 'sandbox') {
+        ant.health = 0;
+      } else {
+        game.state.screen = 'lose';
+      }
     }
   }
 }
