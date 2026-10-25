@@ -42,6 +42,7 @@ function createState(pointer = { x: 0, y: 0 }): Game['state'] {
     confirmQuit: false,
     debugUsed: false,
     pointer: pointer,
+    menuFocus: null,
     spawnQueue: [],
     notification: null,
     invasionDuration: 0,

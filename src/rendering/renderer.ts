@@ -256,7 +256,9 @@ function drawStatus(view: RenderContext) {
   ctx.fillStyle = '#e7e9cd';
   ctx.font = 'bold 11px "Trebuchet MS",sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('INVASION', 28, BOARD_Y + 28);
+  // Once the schedule is empty the bar is full, so count the ants still standing.
+  const lastAnts = !game.state.spawnQueue.length && game.state.ants.length;
+  ctx.fillText(lastAnts ? 'ANTS LEFT: ' + game.state.ants.length : 'INVASION', 28, BOARD_Y + 28);
   ctx.fillStyle = 'rgba(8,22,17,.75)';
   roundedRect(view, 28, BOARD_Y + 36, 132, 8, 4);
   ctx.fill();

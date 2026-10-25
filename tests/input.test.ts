@@ -11,7 +11,14 @@ import { GLOVE_COOLDOWN, MIN_DROP_Y, laneCenterX } from '../src/game/constants';
 import { CAMPAIGN_LEVELS } from '../src/game/definitions';
 import { createGame, startGame } from '../src/game/game';
 import { updateGame } from '../src/game/simulation';
-import { canvasPoint, handleKeyDown, handlePointerDown } from '../src/ui/input';
+import {
+  canvasPoint,
+  cursorFor,
+  focusedMenuIndex,
+  handleKeyDown,
+  handlePointerDown,
+  pauseForInterruption,
+} from '../src/ui/input';
 import {
   containsPoint,
   DEBUG_BUTTON,
@@ -24,10 +31,15 @@ import {
 import { getIntroductionRows, getMenuButtons } from '../src/ui/menus';
 import { testGame } from './helpers';
 
-function key(game: ReturnType<typeof testGame>, value: string) {
+function key(
+  game: ReturnType<typeof testGame>,
+  value: string,
+  modifiers: { ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean } = {},
+) {
   let prevented = false;
   handleKeyDown(game, {
     key: value,
+    ...modifiers,
     preventDefault: () => {
       prevented = true;
     },
@@ -170,6 +182,63 @@ test('the Ant Eater answers to a lowercase e', () => {
   game.state.anteaterCooldown = 0;
   key(game, 'e');
   assert.ok(game.state.anteater);
+});
+
+test('browser and OS shortcuts are not treated as game input', () => {
+  const game = testGame();
+  key(game, '1', { metaKey: true });
+  key(game, '-', { ctrlKey: true });
+  key(game, '2', { altKey: true });
+  assert.equal(game.state.selectedItem, null);
+  key(game, '1');
+  assert.equal(game.state.selectedItem, 'gold');
+});
+
+test('a hidden tab or a lost window pauses the run', () => {
+  const game = testGame();
+  pauseForInterruption(game);
+  assert.equal(game.state.paused, true);
+  pauseForInterruption(game);
+  assert.equal(game.state.paused, true);
+  game.state.screen = 'menu';
+  game.state.paused = false;
+  pauseForInterruption(game);
+  assert.equal(game.state.paused, false);
+});
+
+test('menus can be driven from the keyboard', () => {
+  const game = createGame();
+  assert.equal(focusedMenuIndex(game), -1);
+  key(game, 'ArrowDown');
+  assert.equal(focusedMenuIndex(game), 0);
+  key(game, 'ArrowDown');
+  assert.equal(focusedMenuIndex(game), 1);
+  key(game, 'ArrowUp');
+  key(game, 'ArrowUp');
+  assert.equal(focusedMenuIndex(game), 2);
+  key(game, 'ArrowDown');
+  assert.equal(focusedMenuIndex(game), 0);
+  key(game, 'Enter');
+  assert.equal(game.state.screen, 'levels');
+  assert.equal(focusedMenuIndex(game), -1);
+});
+
+test('the cursor shows what the pointer can act on', () => {
+  const game = createGame();
+  const campaign = getMenuButtons(game)[0];
+  assert.equal(cursorFor(game, { x: campaign.x + 5, y: campaign.y + 5 }), 'pointer');
+  assert.equal(cursorFor(game, { x: 5, y: 5 }), 'default');
+
+  const playing = testGame();
+  const slot = toolbarSlot(0);
+  assert.equal(cursorFor(playing, { x: slot.x + 5, y: slot.y + 5 }), 'pointer');
+  assert.equal(cursorFor(playing, { x: MENU_BUTTON.x + 5, y: MENU_BUTTON.y + 5 }), 'pointer');
+  assert.equal(cursorFor(playing, { x: laneCenterX(1), y: 300 }), 'default');
+  playing.state.selectedItem = 'red';
+  assert.equal(cursorFor(playing, { x: laneCenterX(1), y: 300 }), 'copy');
+  playing.state.selectedItem = null;
+  playing.state.gloveActive = true;
+  assert.equal(cursorFor(playing, { x: laneCenterX(1), y: 300 }), 'grab');
 });
 
 test('a crumb hidden behind the toolbar never steals its clicks', () => {

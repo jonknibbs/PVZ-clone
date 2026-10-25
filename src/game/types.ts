@@ -274,6 +274,11 @@ export interface GameState {
   confirmQuit: boolean;
   debugUsed: boolean;
   pointer: Point;
+  /** Keyboard focus inside a menu, remembered per screen. */
+  menuFocus: {
+    screen: Screen;
+    index: number;
+  } | null;
   spawnQueue: SpawnEvent[];
   notification: {
     text: string;

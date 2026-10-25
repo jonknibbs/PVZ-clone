@@ -11,6 +11,7 @@ import {
   isTrackType,
   ITEM_DEFINITIONS,
 } from '../game/definitions';
+import { focusedMenuIndex } from '../ui/input';
 import { containsPoint, TOOL_BUTTONS, toolbarSlot } from '../ui/layout';
 import { getIntroductionRows, getMenuButtons } from '../ui/menus';
 import { drawAnt, drawAnteater } from './ants';
@@ -60,14 +61,16 @@ export function drawToolbar(view: RenderContext) {
     const definition = ITEM_DEFINITIONS[type];
     const affordable = game.state.crumbs >= definition.cost;
     const cooldown = game.state.cooldowns[type];
+    const selected = game.state.selectedItem === type;
+    const hot = !selected && containsPoint(game.state.pointer, slot);
     const card = ctx.createLinearGradient(slot.x, slot.y, slot.x, slot.y + slot.height);
-    card.addColorStop(0, game.state.selectedItem === type ? '#526b4b' : '#344d3d');
+    card.addColorStop(0, selected ? '#526b4b' : hot ? '#43603f' : '#344d3d');
     card.addColorStop(1, '#20382f');
     ctx.fillStyle = card;
     roundedRect(view, slot.x, slot.y, slot.width, slot.height, 8);
     ctx.fill();
-    ctx.strokeStyle = game.state.selectedItem === type ? '#f3d98c' : 'rgba(235,218,165,.3)';
-    ctx.lineWidth = game.state.selectedItem === type ? 2 : 1;
+    ctx.strokeStyle = selected ? '#f3d98c' : hot ? 'rgba(243,217,140,.7)' : 'rgba(235,218,165,.3)';
+    ctx.lineWidth = selected ? 2 : 1;
     roundedRect(view, slot.x + 0.5, slot.y + 0.5, slot.width - 1, slot.height - 1, 8);
     ctx.stroke();
     const iconX = slot.x + slot.width / 2;
@@ -309,8 +312,14 @@ export function drawMenuOverlay(view: RenderContext) {
     ctx.fillText(messages[0], centerX, CANVAS_HEIGHT / 2 - 20);
   }
   ctx.shadowBlur = 0;
+  const focusedIndex = focusedMenuIndex(game);
+  let unlockedIndex = -1;
   for (const button of getMenuButtons(game)) {
-    const hot = !button.locked && containsPoint(game.state.pointer, button);
+    if (!button.locked) {
+      unlockedIndex++;
+    }
+    const focused = !button.locked && unlockedIndex === focusedIndex;
+    const hot = !button.locked && (focused || containsPoint(game.state.pointer, button));
     const background = ctx.createLinearGradient(0, button.y, 0, button.y + button.height);
     background.addColorStop(0, button.locked ? '#394438' : hot ? '#e8cd80' : '#bf985c');
     background.addColorStop(1, button.locked ? '#25352d' : hot ? '#ad824f' : '#77583d');
@@ -343,6 +352,14 @@ export function drawMenuOverlay(view: RenderContext) {
       ctx.fillStyle = '#fff4d8';
       ctx.font = 'bold 18px "Trebuchet MS",sans-serif';
       ctx.fillText(button.label, button.x + button.width / 2, button.y + 29);
+    }
+    if (focused) {
+      ctx.strokeStyle = '#fff6cf';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      roundedRect(view, button.x - 4, button.y - 4, button.width + 8, button.height + 8, 12);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 }

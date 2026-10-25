@@ -45,10 +45,14 @@ export function canvasPoint(
 export function bindInput(canvas: HTMLCanvasElement, game: Game): () => void {
   const controller = new AbortController();
   const options = { signal: controller.signal };
+  const movePointer = (point: Point) => {
+    game.state.pointer = point;
+    canvas.style.cursor = cursorFor(game, point);
+  };
   canvas.addEventListener(
     'pointermove',
     (event) => {
-      game.state.pointer = canvasPoint(canvas, event as PointerEvent);
+      movePointer(canvasPoint(canvas, event as PointerEvent));
     },
     options,
   );
@@ -65,13 +69,94 @@ export function bindInput(canvas: HTMLCanvasElement, game: Game): () => void {
     (event) => {
       const pointerEvent = event as PointerEvent;
       if (pointerEvent.button === 0) {
-        handlePointerDown(game, canvasPoint(canvas, pointerEvent));
+        const point = canvasPoint(canvas, pointerEvent);
+        // A tap has no hover, so move the pointer first: the placement preview
+        // and button highlights then follow the finger.
+        movePointer(point);
+        handlePointerDown(game, point);
       }
     },
     options,
   );
+  for (const name of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+    canvas.addEventListener(
+      name,
+      (event) => {
+        // Touch has no resting pointer, so clear it and leave no button looking hovered.
+        if ((event as PointerEvent).pointerType !== 'mouse' || name === 'pointerleave') {
+          movePointer(OFF_SCREEN_POINTER);
+        }
+      },
+      options,
+    );
+  }
   window.addEventListener('keydown', (event) => handleKeyDown(game, event), options);
+  // Losing the tab or window mid-wave should not cost the player a run.
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden) {
+        pauseForInterruption(game);
+      }
+    },
+    options,
+  );
+  window.addEventListener('blur', () => pauseForInterruption(game), options);
   return () => controller.abort();
+}
+
+const OFF_SCREEN_POINTER: Point = { x: -1, y: -1 };
+
+export function pauseForInterruption(game: Game) {
+  if (game.state.screen === 'play' && !game.state.paused) {
+    togglePause(game);
+  }
+}
+
+/** Picks the mouse cursor that matches whatever is under the pointer. */
+export function cursorFor(game: Game, point: Point): string {
+  if (game.state.screen !== 'play') {
+    return getMenuButtons(game).some((button) => !button.locked && containsPoint(point, button))
+      ? 'pointer'
+      : 'default';
+  }
+  if (game.state.confirmQuit) {
+    return containsPoint(point, QUIT_CONFIRM_BUTTON) || containsPoint(point, QUIT_CANCEL_BUTTON)
+      ? 'pointer'
+      : 'default';
+  }
+  if (
+    containsPoint(point, MENU_BUTTON) ||
+    containsPoint(point, PAUSE_BUTTON) ||
+    containsPoint(point, DEBUG_BUTTON)
+  ) {
+    return 'pointer';
+  }
+  if (game.state.paused) {
+    return 'default';
+  }
+  if (point.y < TOOLBAR_HEIGHT) {
+    const overSlot = game.state.availableItems.some((_, index) =>
+      containsPoint(point, toolbarSlot(index)),
+    );
+    return overSlot ||
+      (game.state.abilities.glove && containsPoint(point, TOOL_BUTTONS.glove)) ||
+      (game.state.abilities.eater && containsPoint(point, TOOL_BUTTONS.eater))
+      ? 'pointer'
+      : 'default';
+  }
+  if (
+    game.state.crumbDrops.some((crumb) => Math.hypot(crumb.x - point.x, crumb.y - point.y) < 24)
+  ) {
+    return 'pointer';
+  }
+  if (laneAt(point) < 0) {
+    return 'default';
+  }
+  if (game.state.gloveActive) {
+    return game.state.heldItem ? 'grabbing' : 'grab';
+  }
+  return game.state.selectedItem ? 'copy' : 'default';
 }
 
 export function handlePointerDown(game: Game, point: Point) {
@@ -192,13 +277,21 @@ export function cancelQuit(game: Game) {
   game.state.paused = false;
 }
 
-export function handleKeyDown(game: Game, event: Pick<KeyboardEvent, 'key' | 'preventDefault'>) {
+export type GameKeyEvent = Pick<KeyboardEvent, 'key' | 'preventDefault'> &
+  Partial<Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'altKey'>>;
+
+export function handleKeyDown(game: Game, event: GameKeyEvent) {
+  // Browser and OS shortcuts such as Cmd+1 or Ctrl+- are not game input.
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
   if (event.key === 'F2') {
     event.preventDefault();
     toggleDebug(game);
     return;
   }
   if (game.state.screen !== 'play') {
+    handleMenuKeyDown(game, event);
     return;
   }
   if (game.state.confirmQuit) {
@@ -237,4 +330,39 @@ export function handleKeyDown(game: Game, event: Pick<KeyboardEvent, 'key' | 'pr
     cancelSelection(game);
     game.state.selectedItem = game.state.availableItems[index];
   }
+}
+
+/** Arrow keys move between menu buttons and Enter presses the focused one. */
+function handleMenuKeyDown(game: Game, event: GameKeyEvent) {
+  const buttons = getMenuButtons(game).filter((button) => !button.locked);
+  if (!buttons.length) {
+    return;
+  }
+  const current = focusedMenuIndex(game);
+  const step =
+    event.key === 'ArrowDown' || event.key === 'ArrowRight' || event.key === 'Tab'
+      ? 1
+      : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
+        ? -1
+        : 0;
+  if (step) {
+    event.preventDefault();
+    const next = current < 0 ? (step > 0 ? 0 : buttons.length - 1) : current + step;
+    game.state.menuFocus = {
+      screen: game.state.screen,
+      index: (next + buttons.length) % buttons.length,
+    };
+    return;
+  }
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    game.state.menuFocus = null;
+    buttons[Math.max(0, current)].onClick();
+  }
+}
+
+/** The focused button index for the current screen, or -1 when nothing is focused. */
+export function focusedMenuIndex(game: Game) {
+  const focus = game.state.menuFocus;
+  return focus && focus.screen === game.state.screen ? focus.index : -1;
 }
