@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 *.local
+.vite/
 
 # Private, host-specific deployment instructions
 DEPLOYMENT.md
