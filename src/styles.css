@@ -225,3 +225,14 @@ html.compact .board-frame {
   border-radius: 0;
   box-shadow: none;
 }
+
+.site-footer {
+  margin: 16px 0 24px;
+  font-size: 13px;
+  color: var(--cream-muted);
+  text-align: center;
+}
+
+.site-footer a {
+  color: inherit;
+}

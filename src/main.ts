@@ -87,3 +87,8 @@ if (import.meta.hot) {
     unbindInput();
   });
 }
+
+const versionLabel = document.getElementById('app-version');
+if (versionLabel) {
+  versionLabel.textContent = `v${__APP_VERSION__} (build ${__APP_BUILD__})`;
+}
